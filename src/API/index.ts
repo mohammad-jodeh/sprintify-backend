@@ -28,25 +28,48 @@ export class AppServer {
     // Trust proxy for HTTPS
     this.app.set("trust proxy", 1);
 
+    // HTTPS Redirect (in production)
+    this.app.use((req, res, next) => {
+      if (process.env.NODE_ENV === "production" && !req.secure && req.get('x-forwarded-proto') !== 'https') {
+        return res.redirect('https://' + req.get('host') + req.url);
+      }
+      next();
+    });
+
     // Body parser limit
     this.app.use(express.json({ limit: "10mb" }));
     this.app.use(express.urlencoded({ limit: "10mb", extended: true }));
 
-    // Security Headers
+    // Security Headers - Enhanced
     this.app.use((req, res, next) => {
       res.setHeader("X-Content-Type-Options", "nosniff");
       res.setHeader("X-Frame-Options", "DENY");
       res.setHeader("X-XSS-Protection", "1; mode=block");
       res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+      res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload");
+      res.setHeader("Content-Security-Policy", "default-src 'self'");
       next();
     });
 
-    // CORS Configuration - Allow all origins
+    // CORS Configuration - Restricted to specific domain
+    const allowedOrigins = [
+      "https://sprintify-frontend-blue.vercel.app", // Production frontend
+      "http://localhost:5173",                       // Local development
+      "http://localhost:3000",                       // Alternative local port
+    ];
+
     const corsOptions = {
-      origin: "*", // Simple: allow all
+      origin: function (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) {
+        // Allow requests with no origin (like mobile apps or curl requests)
+        if (!origin || allowedOrigins.includes(origin)) {
+          callback(null, true);
+        } else {
+          callback(new Error("CORS not allowed for this origin: " + origin));
+        }
+      },
       methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE", "OPTIONS"],
       allowedHeaders: ["Content-Type", "Authorization"],
-      credentials: false,
+      credentials: true,  // Enable credentials (cookies, auth headers)
       optionsSuccessStatus: 200,
       preflightContinue: false,
     };
