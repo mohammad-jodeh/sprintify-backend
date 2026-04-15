@@ -28,16 +28,41 @@ export class SocketService {
    * @param httpServer - The HTTP server instance to attach Socket.IO to
    */
   initialize(httpServer: HttpServer): void {
+    // CORS origin checker for Socket.IO
+    const corsOriginCheck = (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+      const allowedOrigins = [
+        "https://sprintify-frontend-blue.vercel.app",
+        process.env.FRONTEND_URL || "http://localhost:5173",
+        "http://localhost:5173",
+        "http://localhost:3000",
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:3000",
+      ];
+
+      // Allow no origin (important for local development)
+      if (!origin) {
+        callback(null, true);
+        return;
+      }
+
+      // Allow whitelisted origins
+      if (allowedOrigins.includes(origin)) {
+        callback(null, true);
+        return;
+      }
+
+      // Allow all *.vercel.app preview deployments
+      if (origin.endsWith('.vercel.app')) {
+        callback(null, true);
+        return;
+      }
+
+      callback(null, false);
+    };
+
     this.io = new SocketIOServer(httpServer, {
       cors: {
-        origin: [
-          "https://sprintify-frontend-blue.vercel.app", // Production frontend
-          process.env.FRONTEND_URL || "http://localhost:5173", // Environment variable or default
-          "http://localhost:5173", // Vite default port
-          "http://localhost:3000", // Create React App default port
-          "http://127.0.0.1:5173", // Alternative localhost
-          "http://127.0.0.1:3000",
-        ],
+        origin: corsOriginCheck,
         methods: ["GET", "POST"],
         credentials: true,
         allowedHeaders: ["Authorization"],

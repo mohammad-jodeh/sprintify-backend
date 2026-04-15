@@ -51,7 +51,7 @@ export class AppServer {
       next();
     });
 
-    // CORS Configuration - Restricted to specific domain
+    // CORS Configuration - Allow production & preview deployments
     const allowedOrigins = [
       "https://sprintify-frontend-blue.vercel.app", // Production frontend
       "http://localhost:5173",                       // Local development
@@ -61,11 +61,25 @@ export class AppServer {
     const corsOptions = {
       origin: function (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) {
         // Allow requests with no origin (like mobile apps or curl requests)
-        if (!origin || allowedOrigins.includes(origin)) {
+        if (!origin) {
           callback(null, true);
-        } else {
-          callback(new Error("CORS not allowed for this origin: " + origin));
+          return;
         }
+
+        // Allow specific whitelisted origins
+        if (allowedOrigins.includes(origin)) {
+          callback(null, true);
+          return;
+        }
+
+        // Allow all *.vercel.app preview deployments (for testing pull requests/branches)
+        if (origin.endsWith('.vercel.app')) {
+          callback(null, true);
+          return;
+        }
+
+        // Reject all other origins
+        callback(new Error("CORS not allowed for this origin: " + origin));
       },
       methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE", "OPTIONS"],
       allowedHeaders: ["Content-Type", "Authorization"],
