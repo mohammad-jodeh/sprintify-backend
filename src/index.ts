@@ -86,13 +86,6 @@ if (hasDatabaseUrl) {
 
     // Initialize database connection (but don't sync yet)
     console.log("🗄️  Connecting to database...");
-      });
-    } else {
-      console.log("✅ Database managed by Railway (skipping creation)");
-    }
-
-    // Initialize database connection (but don't sync yet)
-    console.log("🗄️  Connecting to database...");
     await AppDataSource.initialize();
     console.log("✅ Database connected");
     
