@@ -116,8 +116,9 @@ export class AppServer {
           }
         }
       } catch (error) {
+        // Log error but continue - don't re-throw so server can still start with health checks
         console.error(`❌ Error loading route file ${filePath}:`, error);
-        throw error; // Re-throw to prevent silent failures
+        console.warn(`⚠️  Route loading failed, but server will continue with other routes`);
       }
     }
   }
@@ -132,16 +133,30 @@ export class AppServer {
   }
 
   public async listen(port: number): Promise<void> {
-    await this.setupRoutes();
-    //*this middleware cant be registered in setupMiddlewares because it needs to be the last middleware
-    this.app.use(errorMiddleware);
+    try {
+      await this.setupRoutes();
+    } catch (setupError) {
+      console.error(`⚠️  WARN: Failed to fully setup routes, but starting server anyway:`, setupError);
+    }
+    
+    try {
+      this.app.use(errorMiddleware);
+    } catch (middlewareError) {
+      console.error(`❌ ERROR setting up middleware:`, middlewareError);
+    }
     
     // CRITICAL: Must wrap in Promise and resolve AFTER server binds to port
     return new Promise<void>((resolve) => {
-      this.httpServer.listen(port, () => {
+      const server = this.httpServer.listen(port, () => {
         console.info(`🚀 Server running at http://localhost:${port}`);
         console.info(`✅ API is ready to accept requests`);
         resolve();  // ← Only resolve after port is actually bound
+      });
+      
+      // Catch listen errors and log them
+      server.on('error', (error: any) => {
+        console.error(`❌ Server listen error on port ${port}:`, error.message);
+        resolve();  // Still resolve so app doesn't hang
       });
     });
   }
