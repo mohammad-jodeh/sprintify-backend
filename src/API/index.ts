@@ -69,12 +69,21 @@ export class AppServer {
   }
 
   private async setupRoutes() {
-    // Root health check - Railway uses this to verify the app is running
+    // Multiple health check endpoints for compatibility with different health checkers
     this.app.get("/", (_, res) => {
       res.send({ status: "ok", message: "Sprintify API is running" });
     });
+    this.app.get("/health", (_, res) => {
+      res.json({ status: "ok" });
+    });
+    this.app.get("/healthz", (_, res) => {
+      res.json({ status: "ok" });
+    });
     this.app.get("/health-check", (_, res) => {
       res.send({ status: "ok" });
+    });
+    this.app.get(`${this.apiPrefix}/health`, (_, res) => {
+      res.json({ status: "ok" });
     });
     this.app.get(`${this.apiPrefix}/health-check`, (_, res) => {
       res.send({ status: "ok" });
