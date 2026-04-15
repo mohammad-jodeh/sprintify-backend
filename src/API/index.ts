@@ -78,8 +78,8 @@ export class AppServer {
 
     // Support both ts-node-dev (TypeScript) and compiled (JavaScript) environments
     const pattern = process.env.NODE_ENV === "development" && process.argv.includes("ts-node-dev")
-      ? "routes/*.ts"
-      : "routes/*.js";
+      ? "routes/!(base.route).ts"
+      : "routes/!(base.route).js";
     
     const routeFiles = await glob(
       path.resolve(__dirname, pattern).replace(/\\/g, "/")
