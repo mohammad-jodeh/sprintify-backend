@@ -104,7 +104,7 @@ if (hasDatabaseUrl) {
     console.log("📡 Setting up routes...");
     const port = process.env.PORT || 4000;
     console.log(`📡 Listening on port ${port}...`);
-    API.listen(Number(port));
+    await API.listen(Number(port));  // MUST await here!
     console.log(`✅ 🚀 Server running at http://localhost:${port}`);
   } catch (error) {
     console.error("❌ FATAL ERROR during startup:");
