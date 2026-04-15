@@ -22,7 +22,7 @@ export class BoardColumnController {
       CreateBoardColumnDto,
       {
         ...req.body,
-        projectId: req.params.projectId,
+        projectId: req.params.projectId as string,
       },
       {
         excludeExtraneousValues: true,
@@ -67,7 +67,7 @@ export class BoardColumnController {
   }
 
   async delete(req: Request, res: Response, next: NextFunction) {
-    const { id } = req.params;
+    const { id } = req.params as { id: string };
     try {
       if (!id) {
         throw new UserError("Column ID is required", 400);
@@ -81,7 +81,7 @@ export class BoardColumnController {
   }
 
   async get(req: Request, res: Response, next: NextFunction) {
-    const { projectId } = req.params;
+    const { projectId } = req.params as { projectId: string };
 
     try {
       const columns =

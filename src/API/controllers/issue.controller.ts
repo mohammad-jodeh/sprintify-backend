@@ -14,7 +14,7 @@ export class IssueController {
   
   async create(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { projectId } = req.params;
+      const { projectId } = req.params as { projectId: string };
       const userId = req.user?.id; // changed from req.body.userId
       if (!userId) {
         res.status(401).json({ message: "Unauthorized" });
@@ -54,7 +54,7 @@ export class IssueController {
   // GET /api/projects/:projectId/issues (partial/lightweight)
   async getAll(req: Request, res: Response): Promise<void> { // Renamed from getProjectIssues
     try {
-      const { projectId } = req.params;
+      const { projectId } = req.params as { projectId: string };
       const userId = req.user?.id;
       if (!userId) {
         res.status(401).json({ message: "Unauthorized" });
@@ -127,7 +127,7 @@ export class IssueController {
   // GET /api/issues/:id (full details)
   async getById(req: Request, res: Response): Promise<void> { // Renamed from getIssueById
     try {
-      const { id } = req.params;
+      const { id } = req.params as { id: string };
       const userId = req.user?.id;
       if (!userId) {
         res.status(401).json({ message: "Unauthorized" });
@@ -149,7 +149,7 @@ export class IssueController {
 
   async getByKey(req: Request, res: Response) {
     try {
-      const { key } = req.params;
+      const { key } = req.params as { key: string };
       const userId = req.user?.id;
       if (!userId) {
         return res.status(401).json({ message: "Unauthorized" });
@@ -171,7 +171,7 @@ export class IssueController {
   // PUT /api/issues/:id
   async update(req: Request, res: Response): Promise<void> {
     try {
-      const { id } = req.params;
+      const { id } = req.params as { id: string };
       const userId = req.user?.id;
       if (!userId) {
         res.status(401).json({ message: "Unauthorized" });
@@ -208,7 +208,7 @@ export class IssueController {
   // DELETE /api/issues/:id
   async delete(req: Request, res: Response): Promise<void> { // Renamed from deleteIssue
     try {
-      const { id } = req.params;
+      const { id } = req.params as { id: string };
       const userId = req.user?.id;
       if (!userId) {
         res.status(401).json({ message: "Unauthorized" });
@@ -275,7 +275,7 @@ export class IssueController {
   async getAssignedToUser(req: Request, res: Response): Promise<void> {
     try {
       const requestUserId = req.user?.id;
-      const { userId: assigneeUserId } = req.params;
+      const { userId: assigneeUserId } = req.params as { userId: string };
       
       if (!requestUserId) {
         res.status(401).json({ message: "Unauthorized" });
@@ -321,7 +321,7 @@ export class IssueController {
   // GET /api/sprints/:id/issues
   async getBySprint(req: Request, res: Response): Promise<void> { // Renamed from getSprintIssues
     try {
-      const { id: sprintId } = req.params;
+      const { id: sprintId } = req.params as { id: string };
       const userId = req.user?.id;
       if (!userId) {
         res.status(401).json({ message: "Unauthorized" });
@@ -363,7 +363,7 @@ export class IssueController {
   // GET /api/epics/:epicId/issues
   async getByEpic(req: Request, res: Response): Promise<void> { // Renamed from getEpicIssues
     try {
-      const { epicId } = req.params;
+      const { epicId } = req.params as { epicId: string };
       const userId = req.user?.id;
       if (!userId) {
         res.status(401).json({ message: "Unauthorized" });

@@ -61,7 +61,7 @@ export class NotificationController {
    * @returns Promise<void>
    */  async getNotificationById(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { id } = req.params;
+      const { id } = req.params as { id: string };
       const userId = req.user?.id;
       if (!userId) {
         res.status(401).json({ message: "Unauthorized" });
@@ -93,7 +93,7 @@ export class NotificationController {
    * @returns Promise<void>
    */  async markAsRead(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { id } = req.params;
+      const { id } = req.params as { id: string };
       const userId = req.user?.id;
       if (!userId) {
         res.status(401).json({ message: "Unauthorized" });
@@ -154,7 +154,7 @@ export class NotificationController {
    * @returns Promise<void>
    */  async deleteNotification(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { id } = req.params;
+      const { id } = req.params as { id: string };
       const userId = req.user?.id;
       if (!userId) {
         res.status(401).json({ message: "Unauthorized" });

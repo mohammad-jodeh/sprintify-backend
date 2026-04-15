@@ -58,7 +58,7 @@ export class ProjectController {
   }
 
   async delete(req: Request, res: Response, next: NextFunction) {
-    const { id } = req.params;
+    const { id } = req.params as { id: string };
     try {
       await this.projectService.delete(id);
       res.status(204).json({ success: true });
@@ -86,7 +86,7 @@ export class ProjectController {
   }
 
   async findById(req: Request, res: Response, next: NextFunction) {
-    const { id } = req.params;
+    const { id } = req.params as { id: string };
     const user = req.user?.id;
 
     try {

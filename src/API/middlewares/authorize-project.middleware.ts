@@ -21,7 +21,7 @@ export const authorizeProjectAccess = async (
 ): Promise<void> => {
   try {
     const userId = req.user?.id;
-    const projectId = req.params.projectId;
+    const projectId = req.params.projectId as string;
 
     if (!userId) {
       res.status(401).json({ message: "Not authenticated", success: false });

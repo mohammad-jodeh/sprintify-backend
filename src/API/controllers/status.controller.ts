@@ -56,7 +56,7 @@ export class StatusController {
   }
 
   async delete(req: Request, res: Response, next: NextFunction) {
-    const id = req.params.id;
+    const id = req.params.id as string;
 
     try {
       const deleted = await this.service.delete(id);

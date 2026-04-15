@@ -73,7 +73,7 @@ export class ProjectMembersController {
   }
 
   async remove(req: Request, res: Response, next: NextFunction) {
-    const { membershipId } = req.params;
+    const { membershipId } = req.params as { membershipId: string };
 
     try {
       await this.service.remove(membershipId);
@@ -85,7 +85,7 @@ export class ProjectMembersController {
 
   async get(req: Request, res: Response, next: NextFunction) {
     try {
-      const where = { projectId: req.params.projectId };
+      const where = { projectId: req.params.projectId as string };
       const memberships = await this.service.find(where);
 
       res.status(200).json({

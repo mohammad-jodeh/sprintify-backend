@@ -12,7 +12,7 @@ export class EpicController {
 
   async get(req: Request, res: Response, next: NextFunction) {
     try {
-      const { projectId } = req.params;
+      const { projectId } = req.params as { projectId: string };
       const epics = await this.epicService.get(projectId);
       res.status(200).json({ epics, success: true });
     } catch (error) {
@@ -22,7 +22,7 @@ export class EpicController {
 
   async getById(req: Request, res: Response, next: NextFunction) {
     try {
-      const { id } = req.params;
+      const { id } = req.params as { id: string };
       const epic = await this.epicService.getById(id);
       res.status(200).json({ epic, success: true });
     } catch (error) {
@@ -32,7 +32,7 @@ export class EpicController {
 
   async getByKey(req: Request, res: Response, next: NextFunction) {
     try {
-      const { key, projectId } = req.params;
+      const { key, projectId } = req.params as { key: string; projectId: string };
       const epic = await this.epicService.getByKey(key, projectId);
       res.status(200).json({ epic, success: true });
     } catch (error) {
@@ -42,7 +42,7 @@ export class EpicController {
 
   async create(req: Request, res: Response, next: NextFunction) {
     try {
-      const { projectId } = req.params;
+      const { projectId } = req.params as { projectId: string };
       req.body.projectId = projectId;
 
       const dto = plainToInstance(CreateEpicDto, req.body);
@@ -60,7 +60,7 @@ export class EpicController {
 
   async update(req: Request, res: Response, next: NextFunction) {
     try {
-      const { id } = req.params;
+      const { id } = req.params as { id: string };
       const dto = plainToInstance(UpdateEpicDto, req.body);
       const errors = await validate(dto);
       if (errors.length) {
@@ -76,7 +76,7 @@ export class EpicController {
 
   async delete(req: Request, res: Response, next: NextFunction) {
     try {
-      const { id } = req.params;
+      const { id } = req.params as { id: string };
       await this.epicService.delete(id);
       res
         .status(200)
@@ -88,7 +88,7 @@ export class EpicController {
 
   async getEpicIssues(req: Request, res: Response, next: NextFunction) {
     try {
-      const { epicId } = req.params;
+      const { epicId } = req.params as { epicId: string };
       // You may want to add projectId as well if needed: const { projectId } = req.params;
       const issues = await this.epicService.getEpicIssues(epicId);
       res.status(200).json({ issues, success: true });

@@ -30,7 +30,7 @@ export class SprintController {
    */
   async create(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { projectId } = req.params;
+      const { projectId } = req.params as { projectId: string };
       const dto = plainToInstance(CreateSprintDto, {
         ...req.body,
         projectId,
@@ -59,7 +59,7 @@ export class SprintController {
    */
   async update(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { id } = req.params;
+      const { id } = req.params as { id: string };
       const dto = plainToInstance(UpdateSprintDto, {
         ...req.body,
         id,
@@ -88,7 +88,7 @@ export class SprintController {
    */
   async delete(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { id } = req.params;
+      const { id } = req.params as { id: string };
       await this.sprintService.delete(id);
       res.status(204).json({ success: true });
     } catch (error) {
@@ -104,7 +104,7 @@ export class SprintController {
    */
   async getById(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { id } = req.params;
+      const { id } = req.params as { id: string };
       const sprint = await this.sprintService.findById(id);
       res.status(200).json({
         sprint: new SprintResponseDto(sprint),
@@ -123,7 +123,7 @@ export class SprintController {
    */
   async find(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { projectId } = req.params;
+      const { projectId } = req.params as { projectId: string };
       const options: FindSprintOptions = {
         projectId,
         ...req.query,
