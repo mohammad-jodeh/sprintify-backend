@@ -41,18 +41,29 @@ export class AppServer {
       next();
     });
 
-    // CORS Configuration
+    // CORS Configuration - Allow all origins for now
     const corsOptions = {
-      origin: "*", // Allow all origins
+      origin: function (origin: any, callback: any) {
+        // Allow all origins including requests with no origin (like mobile apps or Postman)
+        callback(null, true);
+      },
       methods: "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS",
-      credentials: false, // Can't use true with origin: *
+      credentials: false,
       optionsSuccessStatus: 200,
-      allowedHeaders: "*",
+      allowedHeaders: ["Content-Type", "Authorization"],
+      preflightContinue: false,
     };
 
+    // Apply CORS middleware
     this.app.use(cors(corsOptions));
     
-    // CORS middleware handles preflight (OPTIONS) requests automatically
+    // Explicit preflight handler (some clients need this)
+    this.app.options("*", (req, res) => {
+      res.header("Access-Control-Allow-Origin", "*");
+      res.header("Access-Control-Allow-Methods", "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS");
+      res.header("Access-Control-Allow-Headers", "Content-Type,Authorization");
+      res.sendStatus(200);
+    });
 
     // Rate Limiting - Global
     const generalLimiter = rateLimit({
