@@ -130,8 +130,13 @@ export class AppServer {
     }
   }
   private setupSocket(): void {
-    const socketService = container.resolve<SocketService>("SocketService");
-    socketService.initialize(this.httpServer);
+    try {
+      const socketService = container.resolve<SocketService>("SocketService");
+      socketService.initialize(this.httpServer);
+    } catch (error) {
+      console.error("❌ Error initializing Socket.IO:", error);
+      // Continue anyway - Socket.IO is not critical for API to work
+    }
   }
 
   public async listen(port: number): Promise<void> {
