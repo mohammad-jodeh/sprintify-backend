@@ -31,7 +31,8 @@ export class SocketService {
     this.io = new SocketIOServer(httpServer, {
       cors: {
         origin: [
-          process.env.FRONTEND_URL || "http://localhost:3000",
+          "https://sprintify-frontend-blue.vercel.app", // Production frontend
+          process.env.FRONTEND_URL || "http://localhost:5173", // Environment variable or default
           "http://localhost:5173", // Vite default port
           "http://localhost:3000", // Create React App default port
           "http://127.0.0.1:5173", // Alternative localhost
