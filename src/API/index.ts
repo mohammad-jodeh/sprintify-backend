@@ -43,10 +43,11 @@ export class AppServer {
 
     // CORS Configuration
     const corsOptions = {
-      origin: true, // Allow all origins - can be restricted later after testing
+      origin: "*", // Allow all origins
       methods: "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS",
-      credentials: true,
+      credentials: false, // Can't use true with origin: *
       optionsSuccessStatus: 200,
+      allowedHeaders: "*",
     };
 
     this.app.use(cors(corsOptions));
