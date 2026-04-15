@@ -98,13 +98,22 @@ if (hasDatabaseUrl) {
     await fixStatusProjectIdMigration();
     console.log("✅ Migrations completed");
 
+    console.log("📡 Starting API server initialization...");
     const API = new AppServer();
+    
+    console.log("📡 Setting up routes...");
     const port = process.env.PORT || 4000;
+    console.log(`📡 Listening on port ${port}...`);
     API.listen(Number(port));
     console.log(`✅ 🚀 Server running at http://localhost:${port}`);
   } catch (error) {
     console.error("❌ FATAL ERROR during startup:");
-    console.error(error);
+    console.error("Error type:", error instanceof Error ? error.constructor.name : typeof error);
+    console.error("Error message:", error instanceof Error ? error.message : String(error));
+    if (error instanceof Error && error.stack) {
+      console.error("Stack trace:", error.stack);
+    }
+    console.error("Full error:", error);
     process.exit(1);
   }
 })();
