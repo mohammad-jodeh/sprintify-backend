@@ -44,12 +44,15 @@ export class AppServer {
     // CORS Configuration
     const corsOptions = {
       origin: true, // Allow all origins - can be restricted later after testing
-      methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
+      methods: "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS",
       credentials: true,
       optionsSuccessStatus: 200,
     };
 
     this.app.use(cors(corsOptions));
+    
+    // Explicitly handle OPTIONS requests for all routes
+    this.app.options("*", cors(corsOptions));
 
     // Rate Limiting
     const generalLimiter = rateLimit({
