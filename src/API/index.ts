@@ -100,20 +100,32 @@ export class AppServer {
     console.info(`Found ${routeFiles.length} route files to load`);
 
     for (const filePath of routeFiles) {
-      const module = await import(filePath);
-      for (const exportedName in module) {
-        const RouteClass = module[exportedName];
-        if (
-          typeof RouteClass === "function" &&
-          Object.getPrototypeOf(RouteClass).name === "BaseRoute"
-        ) {
-          const routeInstance: BaseRoute = new RouteClass();
-          this.app.use(
-            `${this.apiPrefix}${routeInstance.path}`,
-            routeInstance.router
-          );
-          console.success(`Loaded route: ${routeInstance.path}`);
+      try {
+        const module = await import(filePath);
+        for (const exportedName in module) {
+          const RouteClass = module[exportedName];
+          if (
+            typeof RouteClass === "function" &&
+            Object.getPrototypeOf(RouteClass).name === "BaseRoute"
+          ) {
+            const routeInstance: BaseRoute = new RouteClass();
+            
+            // Validate path before registering
+            if (!routeInstance.path || typeof routeInstance.path !== "string") {
+              console.error(`❌ Invalid path for route ${exportedName}: "${routeInstance.path}"`);
+              continue;
+            }
+            
+            this.app.use(
+              `${this.apiPrefix}${routeInstance.path}`,
+              routeInstance.router
+            );
+            console.success(`Loaded route: ${routeInstance.path}`);
+          }
         }
+      } catch (error) {
+        console.error(`❌ Error loading route file ${filePath}:`, error);
+        throw error; // Re-throw to prevent silent failures
       }
     }
   }
