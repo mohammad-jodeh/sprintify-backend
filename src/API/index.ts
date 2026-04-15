@@ -51,8 +51,8 @@ export class AppServer {
 
     this.app.use(cors(corsOptions));
     
-    // Explicitly handle OPTIONS requests for all routes
-    this.app.options("*", cors(corsOptions));
+    // Explicitly handle OPTIONS requests for all routes (use regex pattern for wildcard)
+    this.app.options(/.*/gmi, cors(corsOptions));
 
     // Rate Limiting - Global
     const generalLimiter = rateLimit({
