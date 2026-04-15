@@ -135,9 +135,14 @@ export class AppServer {
     await this.setupRoutes();
     //*this middleware cant be registered in setupMiddlewares because it needs to be the last middleware
     this.app.use(errorMiddleware);
-    this.httpServer.listen(port, () => {
-      console.info(`🚀 Server running at http://localhost:${port}`);
-      console.info(`✅ API is ready to accept requests`);
+    
+    // CRITICAL: Must wrap in Promise and resolve AFTER server binds to port
+    return new Promise<void>((resolve) => {
+      this.httpServer.listen(port, () => {
+        console.info(`🚀 Server running at http://localhost:${port}`);
+        console.info(`✅ API is ready to accept requests`);
+        resolve();  // ← Only resolve after port is actually bound
+      });
     });
   }
 }
