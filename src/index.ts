@@ -9,24 +9,60 @@ import dotenv from "dotenv";
 dotenv.config();
 
 // Validate required environment variables
-const requiredEnvVars = ["JWT_SECRET", "DB_PASSWORD"];
+const requiredEnvVars = ["JWT_SECRET"];
 const missingEnvVars = requiredEnvVars.filter(envVar => !process.env[envVar]);
+
+// Check for database configuration (either DATABASE_URL for Railway or individual vars for local)
+const hasDatabaseUrl = !!process.env.DATABASE_URL;
+const hasDbComponents = process.env.DB_PASSWORD && process.env.DB_USER && process.env.DB_HOST;
+
+if (!hasDatabaseUrl && !hasDbComponents) {
+  missingEnvVars.push("DATABASE_URL or (DB_PASSWORD, DB_USER, DB_HOST)");
+}
 
 if (missingEnvVars.length > 0) {
   console.error(
     `❌ FATAL: Missing required environment variables: ${missingEnvVars.join(", ")}`
   );
-  console.error("📋 Please set these in your .env file (copy from .env.example)");
+  console.error("📋 For Railway: Set JWT_SECRET (DATABASE_URL is auto-provided)");
+  console.error("📋 For local dev: Set DB_PASSWORD, DB_USER, DB_HOST, and JWT_SECRET in .env");
   process.exit(1);
 }
 
-const dbConfig = {
-  dbName: process.env.DB_NAME || "sprintify",
-  user: process.env.DB_USER || "postgres",
-  password: process.env.DB_PASSWORD!,
-  host: process.env.DB_HOST || "localhost",
-  port: parseInt(process.env.DB_PORT || "5432"),
-};
+// Parse database configuration
+interface DbConfig {
+  dbName: string;
+  user: string;
+  password: string;
+  host: string;
+  port: number;
+}
+
+let dbConfig: DbConfig;
+
+if (hasDatabaseUrl) {
+  // Railway mode: parse DATABASE_URL
+  // Format: postgresql://user:password@host:port/database
+  const url = new URL(process.env.DATABASE_URL!);
+  dbConfig = {
+    user: url.username,
+    password: url.password,
+    host: url.hostname,
+    port: url.port ? parseInt(url.port) : 5432,
+    dbName: url.pathname.slice(1), // Remove leading slash
+  };
+  console.log("📡 Using DATABASE_URL from Railway");
+} else {
+  // Local dev mode: use individual variables
+  dbConfig = {
+    dbName: process.env.DB_NAME || "sprintify",
+    user: process.env.DB_USER || "postgres",
+    password: process.env.DB_PASSWORD!,
+    host: process.env.DB_HOST || "localhost",
+    port: parseInt(process.env.DB_PORT || "5432"),
+  };
+  console.log("📝 Using individual database configuration variables");
+}
 
 (async () => {
   try {
