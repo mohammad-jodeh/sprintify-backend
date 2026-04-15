@@ -57,12 +57,15 @@ export class AppServer {
     // Apply CORS middleware
     this.app.use(cors(corsOptions));
     
-    // Explicit preflight handler (some clients need this)
-    this.app.options("*", (req, res) => {
-      res.header("Access-Control-Allow-Origin", "*");
-      res.header("Access-Control-Allow-Methods", "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS");
-      res.header("Access-Control-Allow-Headers", "Content-Type,Authorization");
-      res.sendStatus(200);
+    // Handle OPTIONS requests as middleware (NOT as a route to avoid path-to-regexp errors)
+    this.app.use((req, res, next) => {
+      if (req.method === "OPTIONS") {
+        res.header("Access-Control-Allow-Origin", "*");
+        res.header("Access-Control-Allow-Methods", "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS");
+        res.header("Access-Control-Allow-Headers", "Content-Type,Authorization");
+        return res.sendStatus(200);
+      }
+      next();
     });
 
     // Rate Limiting - Global
