@@ -80,10 +80,15 @@ export class AppServer {
       res.send({ status: "ok" });
     });
 
+    console.debug(`🔍 Starting route discovery...`);
+    
     // Support both ts-node-dev (TypeScript) and compiled (JavaScript) environments
     const pattern = process.env.NODE_ENV === "development" && process.argv.includes("ts-node-dev")
       ? "routes/!(base.route).ts"
       : "routes/!(base.route).js";
+    
+    console.debug(`🔍 Route pattern: ${pattern}`);
+    console.debug(`🔍 Routes directory: ${path.resolve(__dirname, pattern)}`);
     
     const routeFiles = await glob(
       path.resolve(__dirname, pattern).replace(/\\/g, "/")
@@ -92,6 +97,7 @@ export class AppServer {
     console.info(`Found ${routeFiles.length} route files to load`);
 
     for (const filePath of routeFiles) {
+      console.debug(`🔍 Loading route file: ${filePath}`);
       try {
         const module = await import(filePath);
         for (const exportedName in module) {
@@ -121,6 +127,8 @@ export class AppServer {
         console.warn(`⚠️  Route loading failed, but server will continue with other routes`);
       }
     }
+    
+    console.debug(`✅ All routes loaded, setupRoutes() complete`);
   }
   private setupSocket(): void {
     try {
