@@ -89,13 +89,14 @@ if (hasDatabaseUrl) {
     await AppDataSource.initialize();
     console.log("✅ Database connected");
     
-    // Run data migrations before schema sync
-    await fixStatusProjectIdMigration();
-    console.log("✅ Migrations completed");
-    
-    // Now perform schema synchronization
+    // First: perform schema synchronization (creates tables)
+    console.log("🗄️  Synchronizing database schema...");
     await AppDataSource.synchronize();
     console.log("✅ Database schema synced");
+    
+    // Then: run data migrations on existing tables
+    await fixStatusProjectIdMigration();
+    console.log("✅ Migrations completed");
 
     const API = new AppServer();
     const port = process.env.PORT || 4000;
