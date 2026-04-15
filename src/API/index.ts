@@ -69,6 +69,10 @@ export class AppServer {
   }
 
   private async setupRoutes() {
+    // Root health check - Railway uses this to verify the app is running
+    this.app.get("/", (_, res) => {
+      res.send({ status: "ok", message: "Sprintify API is running" });
+    });
     this.app.get("/health-check", (_, res) => {
       res.send({ status: "ok" });
     });
