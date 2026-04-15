@@ -54,30 +54,18 @@ export class AppServer {
     // Explicitly handle OPTIONS requests for all routes
     this.app.options("*", cors(corsOptions));
 
-    // Rate Limiting
+    // Rate Limiting - Global
     const generalLimiter = rateLimit({
       windowMs: 15 * 60 * 1000, // 15 minutes
-      max: 100, // limit each IP to 100 requests per windowMs
+      max: 200, // limit each IP to 200 requests per windowMs
       message: "Too many requests from this IP, please try again later",
-      standardHeaders: true, // Return rate limit info in `RateLimit-*` headers
-      legacyHeaders: false, // Disable `X-RateLimit-*` headers
-      skip: (req: any) => process.env.NODE_ENV === "development", // Skip rate limiting in development
+      standardHeaders: true,
+      legacyHeaders: false,
+      skip: (req: any) => process.env.NODE_ENV === "development",
     });
 
-    const authLimiter = rateLimit({
-      windowMs: 15 * 60 * 1000, // 15 minutes
-      max: 5, // Only 5 login attempts
-      skipSuccessfulRequests: true, // Don't count successful requests
-      skip: (req: any) => process.env.NODE_ENV === "development", // Skip rate limiting in development
-      message: "Too many login attempts, please try again after 15 minutes",
-    });
-
-    // Apply general limiter to all API routes
-    this.app.use(`${this.apiPrefix}/`, generalLimiter);
-
-    // Apply stricter limiter to authentication endpoints
-    this.app.use(`${this.apiPrefix}/user/login`, authLimiter);
-    this.app.use(`${this.apiPrefix}/user/register`, authLimiter);
+    // Apply rate limiting globally (simpler and more reliable)
+    this.app.use(generalLimiter);
   }
 
   private async setupRoutes() {
