@@ -42,39 +42,8 @@ export class AppServer {
     });
 
     // CORS Configuration
-    const allowedOrigins = (process.env.FRONTEND_URL || "http://localhost:5173")
-      .split(",")
-      .map(url => url.trim());
-    
     const corsOptions = {
-      origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
-        // Allow requests with no origin (like mobile apps or curl requests)
-        if (!origin) {
-          callback(null, true);
-          return;
-        }
-
-        // Check if origin is in allowed list
-        if (allowedOrigins.includes(origin)) {
-          callback(null, true);
-          return;
-        }
-
-        // Allow all Vercel preview deployments (*.vercel.app)
-        if (origin.includes(".vercel.app")) {
-          callback(null, true);
-          return;
-        }
-
-        // Allow all in development
-        if (process.env.NODE_ENV === "development") {
-          callback(null, true);
-          return;
-        }
-
-        // Reject in production if not in allowed list
-        callback(new Error(`Not allowed by CORS: ${origin}`));
-      },
+      origin: true, // Allow all origins - can be restricted later after testing
       methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
       credentials: true,
       optionsSuccessStatus: 200,
