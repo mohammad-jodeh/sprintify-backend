@@ -131,8 +131,9 @@ export class AppServer {
     await this.setupRoutes();
     //*this middleware cant be registered in setupMiddlewares because it needs to be the last middleware
     this.app.use(errorMiddleware);
-    this.httpServer.listen(port, () =>
-      console.info(`🚀 Server running at http://localhost:${port}`)
-    );
+    this.httpServer.listen(port, () => {
+      console.info(`🚀 Server running at http://localhost:${port}`);
+      console.info(`✅ API is ready to accept requests`);
+    });
   }
 }
