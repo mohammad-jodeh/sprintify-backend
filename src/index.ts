@@ -71,14 +71,28 @@ if (hasDatabaseUrl) {
     await registerDependencies();
     console.log("✅ Dependencies registered");
     
-    console.log("🗄️  Setting up database...");
-    await ensureDatabaseExists({
-      dbName: dbConfig.dbName,
-      user: dbConfig.user,
-      password: dbConfig.password,
-    });
+    // Only ensure database exists in local dev mode
+    // Railway manages the database automatically
+    if (!hasDatabaseUrl) {
+      console.log("🗄️  Setting up database...");
+      await ensureDatabaseExists({
+        dbName: dbConfig.dbName,
+        user: dbConfig.user,
+        password: dbConfig.password,
+      });
+    } else {
+      console.log("✅ Database managed by Railway (skipping creation)");
+    }
 
     // Initialize database connection (but don't sync yet)
+    console.log("🗄️  Connecting to database...");
+      });
+    } else {
+      console.log("✅ Database managed by Railway (skipping creation)");
+    }
+
+    // Initialize database connection (but don't sync yet)
+    console.log("🗄️  Connecting to database...");
     await AppDataSource.initialize();
     console.log("✅ Database connected");
     
