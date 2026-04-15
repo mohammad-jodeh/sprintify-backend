@@ -17,7 +17,7 @@ export function restrictTo(allowedPermission: ProjectPermission) {
       container.resolve("IProjectMemberRepo");
     const membership = await membersRepo.find({
       userId: req.user?.id,
-      projectId: req.params.projectId,
+      projectId: req.params.projectId as string,
     });
 
     if (membership[0].permission < allowedPermission) {
