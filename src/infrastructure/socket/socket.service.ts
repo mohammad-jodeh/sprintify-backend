@@ -69,10 +69,13 @@ export class SocketService {
       },
       allowEIO3: true, // Allow Engine.IO v3 clients
       transports: ["websocket", "polling"],
-      pingTimeout: 60000,
-      pingInterval: 25000,
+      pingTimeout: 20000, // Reduce from 60s to 20s for faster disconnect detection
+      pingInterval: 10000, // Send ping every 10s (was 25s)
       upgradeTimeout: 10000,
       maxHttpBufferSize: 1e6,
+      connectTimeout: 45000, // Max time to wait for initial connection
+      // Enable polling timeout handling
+      serveClient: false, // Don't serve Socket.IO client files
     });
 
     this.io.use(this.authenticateSocket.bind(this));
