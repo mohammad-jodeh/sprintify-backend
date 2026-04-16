@@ -288,6 +288,14 @@ export class SocketService {
   }
 
   /**
+   * Get the Socket.IO server instance
+   * @returns The Socket.IO server instance or undefined
+   */
+  getIO(): SocketIOServer | undefined {
+    return this.io;
+  }
+
+  /**
    * Get online users count
    * @returns The number of online users
    */

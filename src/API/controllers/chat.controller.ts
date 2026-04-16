@@ -3,10 +3,14 @@ import { injectable, inject } from "tsyringe";
 import { ChatService } from "../../app/services/chat.service";
 import { CreateChatChannelDto, SendChatMessageDto } from "../../domain/DTOs/chatDTO";
 import { validate } from "class-validator";
+import { SocketService } from "../../infrastructure/socket/socket.service";
 
 @injectable()
 export class ChatController {
-  constructor(@inject(ChatService) private chatService: ChatService) {}
+  constructor(
+    @inject(ChatService) private chatService: ChatService,
+    @inject(SocketService) private socketService: SocketService
+  ) {}
 
   async createChannel(
     req: Request,
@@ -124,6 +128,26 @@ export class ChatController {
         userId,
         dto.content
       );
+
+      // Broadcast message to all users in the channel via Socket.IO
+      // Use the same channel room name as defined in socket.service.ts
+      try {
+        const io = this.socketService.getIO();
+        if (io) {
+          io.to(`channel:${channelId}`).emit("message-received", {
+            id: message.id,
+            channelId: message.channelId,
+            content: message.content,
+            authorId: message.authorId,
+            author: message.author,
+            createdAt: message.createdAt,
+            isEdited: message.isEdited,
+          });
+        }
+      } catch (socketError) {
+        console.error("Failed to broadcast message via Socket.IO:", socketError);
+        // Don't fail the request if Socket.IO broadcast fails
+      }
 
       res.status(201).json({ data: message, success: true });
     } catch (error) {
