@@ -51,12 +51,15 @@ export class AppServer {
       next();
     });
 
-    // CORS Configuration - Allow production & preview deployments
+    // CORS Configuration - Allow production & all Vercel deployments
     const allowedOrigins = [
       "https://sprintify-frontend-blue.vercel.app", // Production frontend
+      process.env.FRONTEND_URL,                      // Railway/custom domain
       "http://localhost:5173",                       // Local development
       "http://localhost:3000",                       // Alternative local port
-    ];
+      "http://127.0.0.1:5173",                       // Local IP
+      "http://127.0.0.1:3000",                       // Local IP alt
+    ].filter(Boolean); // Remove undefined values
 
     const corsOptions = {
       origin: function (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) {
@@ -72,7 +75,13 @@ export class AppServer {
           return;
         }
 
-        // Reject all other origins (including preview deployments)
+        // Allow all *.vercel.app domains (production and preview deployments)
+        if (origin.endsWith('.vercel.app')) {
+          callback(null, true);
+          return;
+        }
+
+        // Reject all other origins
         callback(new Error("CORS not allowed for this origin: " + origin));
       },
       methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE", "OPTIONS"],
