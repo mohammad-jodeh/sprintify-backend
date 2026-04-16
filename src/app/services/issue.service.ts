@@ -13,13 +13,15 @@ import { ServerError, NotFoundException } from "../exceptions";
 import { FindIssueQueryOptions } from "../../domain/option/issueQueryOptions"; 
 import { NotificationService } from "./notification.service";
 import { NotificationType, NotificationPriority } from "../../domain/types/enums";
+import { SocketService } from "../../infrastructure/socket/socket.service";
 
 @injectable()
 export class IssueService {
   constructor(
     @inject("IIssueRepo") private issueRepo: IIssueRepo,
     @inject("IUserRepo") private userRepo: IUserRepo,
-    private notificationService: NotificationService
+    private notificationService: NotificationService,
+    private socketService: SocketService
   ) {}
 
   async create(userId: string, createIssueDto: CreateIssueDto): Promise<IssueFullResponseDto> {    
@@ -36,6 +38,27 @@ export class IssueService {
     if (!fullIssue) {
       throw new ServerError("Failed to create issue"); 
     }
+
+    // ===== EMIT REAL-TIME SOCKET EVENT =====
+    try {
+      const issueResponse = plainToInstance(IssueFullResponseDto, fullIssue, { excludeExtraneousValues: true });
+      this.socketService.emitToProject(createIssueDto.projectId, "issue:created", {
+        id: fullIssue.id,
+        key: fullIssue.key,
+        title: fullIssue.title,
+        description: fullIssue.description,
+        projectId: fullIssue.projectId,
+        sprintId: fullIssue.sprintId,
+        statusId: fullIssue.statusId,
+        assignee: fullIssue.assignee,
+        createdBy: userId,
+      });
+      console.log(`📨 Emitted issue:created for issue ${key} to project ${createIssueDto.projectId}`);
+    } catch (error) {
+      console.error("Failed to emit real-time notification:", error);
+      // Don't throw - socket failure shouldn't break the create
+    }
+    // ===== END SOCKET EVENT =====
 
     return plainToInstance(IssueFullResponseDto, fullIssue, { excludeExtraneousValues: true });
   }
@@ -90,13 +113,63 @@ export class IssueService {
       throw new NotFoundException("Issue not found");
     }
 
-    // Store previous assignee to detect changes
+    // Store previous values to detect specific changes
     const previousAssignee = existingIssue.assignee;
+    const previousStatusId = existingIssue.statusId;
 
     const updatedIssue = await this.issueRepo.update(issueId, updateIssueDto);
     if (!updatedIssue) {
       throw new ServerError("Failed to update issue"); 
     }
+
+    // ===== EMIT REAL-TIME SOCKET EVENTS =====
+    try {
+      const projectId = updatedIssue.projectId;
+      
+      // Emit general update event
+      this.socketService.emitToProject(projectId, "issue:updated", {
+        id: updatedIssue.id,
+        key: updatedIssue.key,
+        title: updatedIssue.title,
+        description: updatedIssue.description,
+        projectId: updatedIssue.projectId,
+        sprintId: updatedIssue.sprintId,
+        statusId: updatedIssue.statusId,
+        assignee: updatedIssue.assignee,
+        updatedBy: userId,
+      });
+      console.log(`📨 Emitted issue:updated for issue ${updatedIssue.key}`);
+
+      // Emit status change event if status changed
+      if (updateIssueDto.statusId && updateIssueDto.statusId !== previousStatusId) {
+        this.socketService.emitToProject(projectId, "issue:status-changed", {
+          id: updatedIssue.id,
+          key: updatedIssue.key,
+          title: updatedIssue.title,
+          statusId: updatedIssue.statusId,
+          previousStatusId: previousStatusId,
+          changedBy: userId,
+        });
+        console.log(`📨 Emitted issue:status-changed for issue ${updatedIssue.key}`);
+      }
+
+      // Emit assignment change event if assignee changed
+      if (updateIssueDto.assignee && updateIssueDto.assignee !== previousAssignee) {
+        this.socketService.emitToProject(projectId, "issue:assigned", {
+          id: updatedIssue.id,
+          key: updatedIssue.key,
+          title: updatedIssue.title,
+          assignee: updatedIssue.assignee,
+          previousAssignee: previousAssignee,
+          assignedBy: userId,
+        });
+        console.log(`📨 Emitted issue:assigned for issue ${updatedIssue.key}`);
+      }
+    } catch (error) {
+      console.error("Failed to emit real-time notification:", error);
+      // Don't throw - socket failure shouldn't break the update
+    }
+    // ===== END SOCKET EVENTS =====
 
     // Send notification if assignee changed
     if (updateIssueDto.assignee && updateIssueDto.assignee !== previousAssignee) {
@@ -124,10 +197,31 @@ export class IssueService {
   }
 
   async delete(userId: string, issueId: string): Promise<void> { 
+    const issue = await this.issueRepo.getById(issueId);
+    if (!issue) {
+      throw new NotFoundException("Issue not found");
+    }
+
     const deleted = await this.issueRepo.delete(issueId);
     if (!deleted) {
       throw new NotFoundException("Issue not found");
     }
+
+    // ===== EMIT REAL-TIME SOCKET EVENT =====
+    try {
+      this.socketService.emitToProject(issue.projectId, "issue:deleted", {
+        id: issueId,
+        key: issue.key,
+        title: issue.title,
+        projectId: issue.projectId,
+        deletedBy: userId,
+      });
+      console.log(`📨 Emitted issue:deleted for issue ${issue.key}`);
+    } catch (error) {
+      console.error("Failed to emit real-time notification:", error);
+      // Don't throw - socket failure shouldn't break the delete
+    }
+    // ===== END SOCKET EVENT =====
   }
 
   async getMyAssigned( 

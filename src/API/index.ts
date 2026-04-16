@@ -72,13 +72,7 @@ export class AppServer {
           return;
         }
 
-        // Allow all *.vercel.app preview deployments (for testing pull requests/branches)
-        if (origin.endsWith('.vercel.app')) {
-          callback(null, true);
-          return;
-        }
-
-        // Reject all other origins
+        // Reject all other origins (including preview deployments)
         callback(new Error("CORS not allowed for this origin: " + origin));
       },
       methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE", "OPTIONS"],

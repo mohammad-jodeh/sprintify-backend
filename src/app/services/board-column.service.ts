@@ -20,6 +20,10 @@ export class BoardColumnService {
     return await this.boardColumnRepo.update(dto);
   }
 
+  async updateBulk(updates: UpdateBoardColumnDto[]): Promise<BoardColumn[]> {
+    return await this.boardColumnRepo.updateBulk(updates);
+  }
+
   async delete(id: string): Promise<boolean> {
     return await this.boardColumnRepo.delete(id);
   }

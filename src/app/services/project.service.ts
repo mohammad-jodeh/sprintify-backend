@@ -15,6 +15,7 @@ import { CreateProjectMemberDto } from "../../domain/DTOs/projectMemberDTO";
 import { BoardColumnService } from "./board-column.service";
 import { StatusService } from "./status.service";
 import { CreateStatusDto } from "../../domain/DTOs/statusDTO";
+import { UserError } from "../exceptions";
 
 @injectable()
 export class ProjectService {
@@ -36,23 +37,8 @@ export class ProjectService {
     };
     const members = await this.memberService.add(newMembership);
 
-    const columns = await this.boardColumnService.createDefaultColumns(
-      project.id
-    );
-    const statusConfig: CreateStatusDto[] = [
-      { name: "To Do", type: StatusType.BACKLOG, columnId: columns[0].id, projectId: project.id },
-      {
-        name: "In Progress",
-        type: StatusType.IN_PROGRESS,
-        columnId: columns[1].id,
-        projectId: project.id,
-      },
-      { name: "Done", type: StatusType.DONE, columnId: columns[2].id, projectId: project.id },
-    ];
-    const statuses = await this.statusService.createDefaultStatuses(
-      statusConfig
-    );
-
+    // Columns are now created via Settings/Project Configuration
+    // No default columns are created here anymore
 
     return { ...project, members: [members] };
   }
@@ -63,7 +49,19 @@ export class ProjectService {
     return this.projectRepo.update(dto);
   }
 
-  async delete(id: string): Promise<void> {
+  async delete(id: string, userId: string): Promise<void> {
+    // Verify user is the project creator before allowing deletion
+    const projects = await this.projectRepo.find({ id }, userId);
+    
+    if (!projects || projects.length === 0) {
+      throw new UserError(["Project not found"], 404);
+    }
+    
+    const project = projects[0];
+    if (project.createdBy !== userId) {
+      throw new UserError(["Only the project creator can delete this project"], 403);
+    }
+    
     return this.projectRepo.delete(id);
   }
 

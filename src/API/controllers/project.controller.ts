@@ -59,8 +59,12 @@ export class ProjectController {
 
   async delete(req: Request, res: Response, next: NextFunction) {
     const { id } = req.params as { id: string };
+    const userId = req.user?.id;
     try {
-      await this.projectService.delete(id);
+      if (!userId) {
+        return res.status(401).json({ message: "Not authenticated", success: false });
+      }
+      await this.projectService.delete(id, userId);
       res.status(204).json({ success: true });
     } catch (error) {
       next(error);

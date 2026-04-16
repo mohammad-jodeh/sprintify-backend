@@ -1,4 +1,5 @@
 import { container } from "tsyringe";
+import { Request, Response, NextFunction } from "express";
 import { BaseRoute } from "./base.route";
 import { UserController } from "../controllers/user.controller";
 import { authenticate } from "../middlewares/auth.middleware";
@@ -9,6 +10,22 @@ export class UserRoutes extends BaseRoute {
   public path = "/user";
   protected initRoutes(): void {
     const controller = container.resolve(UserController);
+
+    // Middleware to prevent user enumeration - only allow searching own profile
+    const restrictUserSearch = (req: Request, res: Response, next: NextFunction) => {
+      const searchId = req.query.id as string;
+      const searchEmail = req.query.email as string;
+      const userId = req.user?.id;
+
+      // Only allow searching own user ID
+      if ((searchId && searchId !== userId) || searchEmail) {
+        return res.status(403).json({
+          success: false,
+          message: "You can only view your own user information",
+        });
+      }
+      next();
+    };
 
     this.router.post("/register", controller.register.bind(controller));
     this.router.post("/login", controller.login.bind(controller));
@@ -31,6 +48,7 @@ export class UserRoutes extends BaseRoute {
     this.router.get(
       "/search",
       authenticate,
+      restrictUserSearch,
       controller.getUserByEmailOrId.bind(controller),
     );
   }

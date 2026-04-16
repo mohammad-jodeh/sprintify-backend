@@ -66,6 +66,34 @@ export class BoardColumnController {
     }
   }
 
+  async updateBulk(req: Request, res: Response, next: NextFunction) {
+    const dtos = Array.isArray(req.body) 
+      ? req.body 
+      : [req.body];
+
+    try {
+      const validatedDtos = await Promise.all(
+        dtos.map(async (dto) => {
+          const instance = plainToInstance(UpdateBoardColumnDto, dto, {
+            excludeExtraneousValues: true,
+          });
+          const errors = await validate(instance);
+          if (errors.length) throw new UserError(errors);
+          return instance;
+        })
+      );
+
+      const columns = await this.boardColumnService.updateBulk(validatedDtos);
+
+      res.status(200).json({
+        columns: columns.map((col) => new BoardColumnResponseDto(col)),
+        success: true,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async delete(req: Request, res: Response, next: NextFunction) {
     const { id } = req.params as { id: string };
     try {

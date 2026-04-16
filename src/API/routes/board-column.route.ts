@@ -32,6 +32,13 @@ export class BoardColumnRoutes extends BaseRoute {
       controller.update.bind(controller)
     );
 
+    this.router.patch(
+      "/bulk/reorder",
+      restrictTokens(Token.ACCESS),
+      restrictTo(ProjectPermission.MODERATOR),
+      controller.updateBulk.bind(controller)
+    );
+
     this.router.delete(
       "/:id",
       restrictTokens(Token.ACCESS),

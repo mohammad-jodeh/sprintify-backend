@@ -169,6 +169,44 @@ export class SocketService {
       socket.leave(`project:${projectId}`);
       console.info(`🔌 User ${userId} left project room: ${projectId}`);
     });
+
+    // Handle joining chat channels
+    socket.on("join-channel", (channelId: string) => {
+      socket.join(`channel:${channelId}`);
+      console.info(`🔌 User ${userId} joined chat channel: ${channelId}`);
+      
+      // Notify others in the channel
+      this.io?.to(`channel:${channelId}`).emit("user-joined", { userId });
+    });
+
+    // Handle leaving chat channels
+    socket.on("leave-channel", (channelId: string) => {
+      socket.leave(`channel:${channelId}`);
+      console.info(`🔌 User ${userId} left chat channel: ${channelId}`);
+      
+      // Notify others in the channel
+      this.io?.to(`channel:${channelId}`).emit("user-left", { userId });
+    });
+
+    // Handle new messages
+    socket.on("send-message", (data: { channelId: string; content: string }) => {
+      // Broadcast message to channel
+      this.io?.to(`channel:${data.channelId}`).emit("message-received", {
+        channelId: data.channelId,
+        content: data.content,
+        userId,
+      });
+    });
+
+    // Handle typing indicator
+    socket.on("typing", (data: { channelId: string }) => {
+      socket.to(`channel:${data.channelId}`).emit("user-typing", { userId });
+    });
+
+    // Handle stop typing
+    socket.on("stop-typing", (data: { channelId: string }) => {
+      socket.to(`channel:${data.channelId}`).emit("user-stopped-typing", { userId });
+    });
   }
 
   /**
