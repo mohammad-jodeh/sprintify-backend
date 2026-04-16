@@ -134,7 +134,8 @@ export class ChatController {
       try {
         const io = this.socketService.getIO();
         if (io) {
-          io.to(`channel:${channelId}`).emit("message-received", {
+          const roomName = `channel:${channelId}`;
+          const messagePayload = {
             id: message.id,
             channelId: message.channelId,
             content: message.content,
@@ -142,10 +143,18 @@ export class ChatController {
             author: message.author,
             createdAt: message.createdAt,
             isEdited: message.isEdited,
-          });
+          };
+          
+          console.log(`📡 [BROADCAST] Emitting message-received to room: ${roomName}`);
+          console.log(`📦 [MESSAGE] ID: ${message.id}, Content: "${message.content}"`);
+          
+          io.to(roomName).emit("message-received", messagePayload);
+          console.log(`✅ [BROADCAST] Successfully emitted to ${roomName}`);
+        } else {
+          console.warn("⚠️ [BROADCAST] Socket.IO not initialized");
         }
       } catch (socketError) {
-        console.error("Failed to broadcast message via Socket.IO:", socketError);
+        console.error("❌ [BROADCAST] Failed to broadcast message:", socketError);
         // Don't fail the request if Socket.IO broadcast fails
       }
 

@@ -176,7 +176,8 @@ export class SocketService {
     // Handle joining chat channels
     socket.on("join-channel", (channelId: string) => {
       socket.join(`channel:${channelId}`);
-      console.info(`🔌 User ${userId} joined chat channel: ${channelId}`);
+      console.log(`✅ [SOCKET] User ${userId} joined channel room: channel:${channelId}`);
+      console.log(`📊 [SOCKET-ROOMS] Socket ${socket.id} rooms:`, socket.rooms);
       
       // Notify others in the channel
       this.io?.to(`channel:${channelId}`).emit("user-joined", { userId });
@@ -185,7 +186,7 @@ export class SocketService {
     // Handle leaving chat channels
     socket.on("leave-channel", (channelId: string) => {
       socket.leave(`channel:${channelId}`);
-      console.info(`🔌 User ${userId} left chat channel: ${channelId}`);
+      console.log(`❌ [SOCKET] User ${userId} left channel room: channel:${channelId}`);
       
       // Notify others in the channel
       this.io?.to(`channel:${channelId}`).emit("user-left", { userId });
