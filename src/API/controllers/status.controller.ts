@@ -76,16 +76,28 @@ export class StatusController {
   }
 
   async find(req: Request, res: Response, next: NextFunction) {
+    // Extract filter parameters from query string
+    // Query params can be strings or arrays, so we normalize them
+    const query = req.query as Record<string, any>;
+    
     const where: FindStatusOptions = {
-      ...req.body,
       projectId: req.params.projectId,
+      // Add optional filters from query if provided
+      ...(query.id && { id: Array.isArray(query.id) ? query.id[0] : query.id }),
+      ...(query.name && { name: Array.isArray(query.name) ? query.name[0] : query.name }),
+      ...(query.type && { type: Array.isArray(query.type) ? query.type[0] : query.type }),
+      ...(query.columnId && { columnId: Array.isArray(query.columnId) ? query.columnId[0] : query.columnId }),
     };
+
+    console.log("📋 [STATUS-FIND] Received find request with options:", { query: req.query, where });
 
     try {
       const statuses = await this.service.find(where);
+      console.log(`✅ [STATUS-FIND] Found ${statuses.length} statuses for projectId: ${req.params.projectId}`);
 
       res.status(200).json({ statuses, success: true });
     } catch (error) {
+      console.error("❌ [STATUS-FIND] Error finding statuses:", error);
       next(error);
     }
   }
