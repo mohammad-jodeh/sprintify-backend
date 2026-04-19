@@ -11,6 +11,7 @@ import { container } from "tsyringe";
 import { SocketService } from "../infrastructure/socket/socket.service";
 import cors from "cors";
 import rateLimit from "express-rate-limit";
+import compression from "compression";
 
 
 export class AppServer {
@@ -93,6 +94,18 @@ export class AppServer {
 
     // Apply CORS middleware (this handles preflight OPTIONS automatically)
     this.app.use(cors(corsOptions));
+
+    // Compression Middleware - Reduce response size by 70-80%
+    this.app.use(compression({
+      level: 6, // Balance between speed and compression
+      threshold: 1024, // Only compress responses > 1KB
+      filter: (req: any, res: any) => {
+        if (req.headers['x-no-compression']) {
+          return false;
+        }
+        return compression.filter(req, res);
+      }
+    }));
 
     // Rate Limiting - Global
     const generalLimiter = rateLimit({

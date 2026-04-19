@@ -23,6 +23,11 @@ if (process.env.DATABASE_URL) {
     url: process.env.DATABASE_URL,
     synchronize: false,
     logging: ["error", "warn"],
+    // Connection pooling for better concurrency (60+ users)
+    pool: {
+      max: 20,  // Max connections from pool
+      min: 2,   // Min idle connections
+    },
   };
 } else {
   // Local dev mode: use individual variables
@@ -35,6 +40,11 @@ if (process.env.DATABASE_URL) {
     database: process.env.DB_NAME || "sprintify",
     synchronize: false,
     logging: ["error", "warn"],
+    // Connection pooling for better concurrency
+    pool: {
+      max: 20,
+      min: 2,
+    },
   };
 }
 
