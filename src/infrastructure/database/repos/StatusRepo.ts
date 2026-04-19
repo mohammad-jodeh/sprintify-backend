@@ -20,10 +20,15 @@ export class StatusRepo implements IStatusRepo {
   }
 
   async create(status: CreateStatusDto): Promise<Status> {
+    console.log("💾 [STATUS-REPO-CREATE] Saving status to database:", status);
     try {
       const newStatus = this._repo.create(status);
-      return await this._repo.save(newStatus);
+      console.log("📌 [STATUS-REPO-CREATE] TypeORM status object created:", newStatus);
+      const result = await this._repo.save(newStatus);
+      console.log("✅ [STATUS-REPO-CREATE] Status saved successfully:", result);
+      return result;
     } catch (error) {
+      console.error("❌ [STATUS-REPO-CREATE] Database error:", error);
       throw getDBError(error);
     }
   }

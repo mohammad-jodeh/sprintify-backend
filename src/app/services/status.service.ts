@@ -9,7 +9,15 @@ export class StatusService {
   constructor(@inject("IStatusRepo") private repo: IStatusRepo) {}
 
   async create(statusData: CreateStatusDto): Promise<Status> {
-    return await this.repo.create(statusData);
+    console.log("📦 [STATUS-SERVICE-CREATE] Creating status with data:", statusData);
+    try {
+      const result = await this.repo.create(statusData);
+      console.log("✅ [STATUS-SERVICE-CREATE] Status created successfully:", result);
+      return result;
+    } catch (error) {
+      console.error("❌ [STATUS-SERVICE-CREATE] Failed to create status:", error);
+      throw error;
+    }
   }
 
   async update(statusData: UpdateStatusDto): Promise<Status> {

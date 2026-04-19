@@ -19,16 +19,22 @@ export class StatusController {
       excludeExtraneousValues: true,
     });
 
+    console.log("📝 [STATUS-CREATE] Received request with DTO:", dto);
+
     try {
       const error = await validate(dto);
       if (error.length) {
+        console.error("❌ [STATUS-CREATE] Validation failed:", error);
         throw new UserError(error);
       }
 
+      console.log("✅ [STATUS-CREATE] Validation passed, creating status...");
       const status = await this.service.create(dto);
+      console.log("✅ [STATUS-CREATE] Status created successfully:", status);
 
       res.status(201).json({ status, success: true });
     } catch (error) {
+      console.error("❌ [STATUS-CREATE] Error:", error);
       next(error);
     }
   }
