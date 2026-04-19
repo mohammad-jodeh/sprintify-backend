@@ -52,7 +52,6 @@ export class NotificationRoutes extends BaseRoute {
       "/:id",
       authenticate,
       controller.deleteNotification.bind(controller)
-    );    // Create notification (admin/system use)
-   
+    );
   }
 }

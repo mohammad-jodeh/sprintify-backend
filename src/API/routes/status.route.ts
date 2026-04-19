@@ -9,7 +9,7 @@ import { restrictTo } from "../middlewares/permissions.middleware";
 import { restrictTokens } from "../middlewares/tokenTypes.middleware";
 
 export class StatusRoutes extends BaseRoute {
-  public path = "/:projectId/status";
+  public path = "/:projectId/statuses";
 
   protected initRoutes(): void {
     const controller = container.resolve(StatusController);

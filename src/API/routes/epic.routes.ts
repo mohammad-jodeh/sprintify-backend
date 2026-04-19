@@ -8,7 +8,7 @@ import { Token } from "../enums/token";
 import { Router } from "express";
 
 export class EpicRoutes extends BaseRoute {
-  public path = "/:projectId/epic";
+  public path = "/:projectId/epics";
 
   constructor() {
     super();

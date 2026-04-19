@@ -20,6 +20,15 @@ export function restrictTo(allowedPermission: ProjectPermission) {
       projectId: req.params.projectId as string,
     });
 
+    // Safety check: ensure membership exists and has elements
+    if (!membership || membership.length === 0) {
+      res.status(403).json({
+        success: false,
+        message: "Forbidden: You are not a member of this project",
+      });
+      return;
+    }
+
     if (membership[0].permission < allowedPermission) {
       res.status(403).json({
         success: false,
