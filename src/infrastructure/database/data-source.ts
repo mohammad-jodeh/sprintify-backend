@@ -1,9 +1,6 @@
 import { DataSource } from "typeorm";
 import {
   BoardColumn,
-  ChatChannel,
-  ChatChannelMember,
-  ChatMessage,
   Epic,
   Issue,
   Notification,
@@ -45,9 +42,6 @@ export const AppDataSource = new DataSource({
   ...dbConfig,
   entities: [
     BoardColumn,
-    ChatChannel,
-    ChatChannelMember,
-    ChatMessage,
     Epic,
     Issue,
     Notification,
