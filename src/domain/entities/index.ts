@@ -8,3 +8,4 @@ export * from "./project.entity";
 export * from "./sprint.entity";
 export * from "./status.entity";
 export * from "./user.entity";
+export * from "./automation-rule.entity";

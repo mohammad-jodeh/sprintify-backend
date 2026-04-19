@@ -7,7 +7,7 @@ import {
   OneToMany,
   OneToOne,
 } from "typeorm";
-import { BaseEntity, ProjectMember, Sprint, User } from ".";
+import { BaseEntity, ProjectMember, Sprint, User, AutomationRule } from ".";
 
 @Entity("projects")
 export class Project extends BaseEntity {
@@ -32,6 +32,9 @@ export class Project extends BaseEntity {
 
   @OneToMany(() => Sprint, (sprint) => sprint.project)
   sprints!: Sprint[];
+
+  @OneToMany(() => AutomationRule, (rule) => rule.project)
+  automationRules!: AutomationRule[];
 
   @OneToOne(() => Sprint, { onDelete: "SET NULL", nullable: true })
   @JoinColumn({ name: "activeSprintId", referencedColumnName: "id" })
