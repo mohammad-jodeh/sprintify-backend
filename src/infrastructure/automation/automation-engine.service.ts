@@ -51,7 +51,9 @@ export class AutomationEngineService {
   ): Promise<void> {
     try {
       // Check if trigger condition matches
-      if (!this.matchesTriggerCondition(rule.triggerCondition, triggerData)) {
+      const matches = await this.matchesTriggerCondition(rule.triggerCondition, triggerData);
+      if (!matches) {
+        console.log(`⏭️ Skipped rule "${rule.name}" - condition did not match`);
         return;
       }
 
@@ -85,16 +87,40 @@ export class AutomationEngineService {
 
   /**
    * Check if trigger condition matches the data
+   * Handles both status IDs and status names
    */
-  private matchesTriggerCondition(
+  private async matchesTriggerCondition(
     condition: Record<string, any>,
     data: Record<string, any>
-  ): boolean {
-    // Status changed transition
+  ): Promise<boolean> {
+    // Status changed transition - check both by ID and by name
     if (condition.fromStatus && condition.toStatus) {
+      const previousStatusId = data.previousStatus;
+      const currentStatusId = data.currentStatus;
+      
+      // Get status names to support both ID and name matching
+      let previousStatusName = data.previousStatusName;
+      let currentStatusName = data.currentStatusName;
+      
+      // If names not provided, look them up from IDs
+      if (!previousStatusName && previousStatusId) {
+        const prevStatus = await this.statusRepository.findOne({
+          where: { id: previousStatusId as any }
+        });
+        previousStatusName = prevStatus?.name;
+      }
+      
+      if (!currentStatusName && currentStatusId) {
+        const currStatus = await this.statusRepository.findOne({
+          where: { id: currentStatusId as any }
+        });
+        currentStatusName = currStatus?.name;
+      }
+      
+      // Match by name (condition stores names)
       return (
-        data.previousStatus === condition.fromStatus &&
-        data.currentStatus === condition.toStatus
+        (previousStatusName === condition.fromStatus || previousStatusId === condition.fromStatus) &&
+        (currentStatusName === condition.toStatus || currentStatusId === condition.toStatus)
       );
     }
 
