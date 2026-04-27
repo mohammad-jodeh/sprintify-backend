@@ -14,9 +14,12 @@ import { FindIssueQueryOptions } from "../../domain/option/issueQueryOptions";
 import { NotificationService } from "./notification.service";
 import { NotificationType, NotificationPriority } from "../../domain/types/enums";
 import { SocketService } from "../../infrastructure/socket/socket.service";
+import { AutomationEngineService } from "../../infrastructure/automation/automation-engine.service";
 
 @injectable()
 export class IssueService {
+  private automationEngine = new AutomationEngineService();
+
   constructor(
     @inject("IIssueRepo") private issueRepo: IIssueRepo,
     @inject("IUserRepo") private userRepo: IUserRepo,
@@ -59,6 +62,21 @@ export class IssueService {
       // Don't throw - socket failure shouldn't break the create
     }
     // ===== END SOCKET EVENT =====
+
+    // ===== TRIGGER AUTOMATION RULES =====
+    try {
+      await this.automationEngine.triggerAutomations(createIssueDto.projectId, "issue_created", {
+        issueId: fullIssue.id,
+        issueKey: fullIssue.key,
+        issueTitle: fullIssue.title,
+        statusId: fullIssue.statusId,
+        assignee: fullIssue.assignee,
+      });
+      console.log(`🤖 [AUTOMATION] Triggered automation rules for issue creation on ${key}`);
+    } catch (error) {
+      console.error(`❌ [AUTOMATION] Failed to trigger automations for ${key}:`, error);
+    }
+    // ===== END AUTOMATION TRIGGER =====
 
     return plainToInstance(IssueFullResponseDto, fullIssue, { excludeExtraneousValues: true });
   }
@@ -151,6 +169,20 @@ export class IssueService {
           changedBy: userId,
         });
         console.log(`📨 Emitted issue:status-changed for issue ${updatedIssue.key}`);
+        
+        // ===== TRIGGER AUTOMATION RULES =====
+        try {
+          await this.automationEngine.triggerAutomations(projectId, "status_changed", {
+            issueId: updatedIssue.id,
+            previousStatus: previousStatusId,
+            currentStatus: updatedIssue.statusId,
+            issueKey: updatedIssue.key,
+            issueTitle: updatedIssue.title,
+          });
+          console.log(`🤖 [AUTOMATION] Triggered automation rules for status change on ${updatedIssue.key}`);
+        } catch (error) {
+          console.error(`❌ [AUTOMATION] Failed to trigger automations for ${updatedIssue.key}:`, error);
+        }
       }
 
       // Emit assignment change event if assignee changed
@@ -164,6 +196,20 @@ export class IssueService {
           assignedBy: userId,
         });
         console.log(`📨 Emitted issue:assigned for issue ${updatedIssue.key}`);
+        
+        // ===== TRIGGER AUTOMATION RULES =====
+        try {
+          await this.automationEngine.triggerAutomations(projectId, "assignee_changed", {
+            issueId: updatedIssue.id,
+            assignee: updatedIssue.assignee,
+            previousAssignee: previousAssignee,
+            issueKey: updatedIssue.key,
+            issueTitle: updatedIssue.title,
+          });
+          console.log(`🤖 [AUTOMATION] Triggered automation rules for assignment on ${updatedIssue.key}`);
+        } catch (error) {
+          console.error(`❌ [AUTOMATION] Failed to trigger automations for ${updatedIssue.key}:`, error);
+        }
       }
     } catch (error) {
       console.error("Failed to emit real-time notification:", error);
