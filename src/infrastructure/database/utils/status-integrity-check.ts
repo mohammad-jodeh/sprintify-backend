@@ -31,22 +31,22 @@ export const getStatusIntegrityReport = async (
   const statusRepo = AppDataSource.getRepository(Status);
 
   const validStatusIdExpr =
-    "issue.statusId IS NOT NULL AND BTRIM(issue.statusId::text) <> '' AND LOWER(issue.statusId::text) <> 'null'";
+    '"issue"."statusId" IS NOT NULL AND BTRIM("issue"."statusId"::text) <> \'\' AND LOWER("issue"."statusId"::text) <> \'null\'';
 
   const invalidStatusIdFormatQuery = issueRepo
     .createQueryBuilder("issue")
     .where(validStatusIdExpr)
     .andWhere(
-      "issue.statusId::text !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'"
+      '"issue"."statusId"::text !~* \'[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$\''
     );
 
   const baseQuery = issueRepo
     .createQueryBuilder("issue")
-    .leftJoin(Status, "status", "status.id::text = issue.statusId::text")
-    .leftJoin(BoardColumn, "column", "column.id = status.columnId")
+    .leftJoin(Status, "status", '"status"."id"::text = "issue"."statusId"::text')
+    .leftJoin(BoardColumn, "column", '"column"."id" = "status"."columnId"')
     .where(validStatusIdExpr)
     .andWhere(
-      "status.id IS NULL OR status.projectId <> issue.projectId OR column.id IS NULL OR column.projectId <> issue.projectId"
+      '"status"."id" IS NULL OR "status"."projectId" <> "issue"."projectId" OR "column"."id" IS NULL OR "column"."projectId" <> "issue"."projectId"'
     );
 
   const [
@@ -62,7 +62,7 @@ export const getStatusIntegrityReport = async (
     await Promise.all([
       issueRepo
         .createQueryBuilder("issue")
-        .where("issue.statusId IS NULL OR BTRIM(issue.statusId::text) = '' OR LOWER(issue.statusId::text) = 'null'")
+        .where('"issue"."statusId" IS NULL OR BTRIM("issue"."statusId"::text) = \'\' OR LOWER("issue"."statusId"::text) = \'null\'')
         .getCount(),
       issueRepo
         .createQueryBuilder("issue")
@@ -73,24 +73,24 @@ export const getStatusIntegrityReport = async (
       invalidStatusIdFormatQuery.clone().getCount(),
       issueRepo
         .createQueryBuilder("issue")
-        .leftJoin(Status, "status", "status.id::text = issue.statusId::text")
+        .leftJoin(Status, "status", '"status"."id"::text = "issue"."statusId"::text')
         .where(validStatusIdExpr)
-        .andWhere("status.id IS NULL")
+        .andWhere('"status"."id" IS NULL')
         .getCount(),
       issueRepo
         .createQueryBuilder("issue")
-        .leftJoin(Status, "status", "status.id::text = issue.statusId::text")
+        .leftJoin(Status, "status", '"status"."id"::text = "issue"."statusId"::text')
         .where(validStatusIdExpr)
-        .andWhere("status.id IS NOT NULL")
-        .andWhere("status.projectId <> issue.projectId")
+        .andWhere('"status"."id" IS NOT NULL')
+        .andWhere('"status"."projectId" <> "issue"."projectId"')
         .getCount(),
       issueRepo
         .createQueryBuilder("issue")
-        .leftJoin(Status, "status", "status.id::text = issue.statusId::text")
-        .leftJoin(BoardColumn, "column", "column.id = status.columnId")
+        .leftJoin(Status, "status", '"status"."id"::text = "issue"."statusId"::text')
+        .leftJoin(BoardColumn, "column", '"column"."id" = "status"."columnId"')
         .where(validStatusIdExpr)
-        .andWhere("status.id IS NOT NULL")
-        .andWhere("(column.id IS NULL OR column.projectId <> issue.projectId)")
+        .andWhere('"status"."id" IS NOT NULL')
+        .andWhere('("column"."id" IS NULL OR "column"."projectId" <> "issue"."projectId")')
         .getCount(),
     ]);
 
