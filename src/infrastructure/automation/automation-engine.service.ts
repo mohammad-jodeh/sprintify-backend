@@ -1,7 +1,9 @@
 import { AppDataSource } from "../database/data-source";
 import { AutomationRule } from "../../domain/entities";
-import { Issue, Status } from "../../domain/entities";
+import { Issue, ProjectMember, Status, User } from "../../domain/entities";
 import { CacheService } from "../cache/cache.service";
+import { Notification } from "../../domain/entities/notification.entity";
+import { NotificationPriority, NotificationType } from "../../domain/types/enums";
 
 /**
  * Automation Engine Service
@@ -11,6 +13,9 @@ export class AutomationEngineService {
   private ruleRepository = AppDataSource.getRepository(AutomationRule);
   private issueRepository = AppDataSource.getRepository(Issue);
   private statusRepository = AppDataSource.getRepository(Status);
+  private userRepository = AppDataSource.getRepository(User);
+  private projectMemberRepository = AppDataSource.getRepository(ProjectMember);
+  private notificationRepository = AppDataSource.getRepository(Notification);
   private cache = CacheService.getInstance();
 
   /**
@@ -51,7 +56,13 @@ export class AutomationEngineService {
   ): Promise<void> {
     try {
       // Check if trigger condition matches
-      if (!this.matchesTriggerCondition(rule.triggerCondition, triggerData)) {
+      const matches = await this.matchesTriggerCondition(rule.triggerCondition, triggerData);
+      if (!matches) {
+        console.log(`⏭️ Skipped rule "${rule.name}" - condition did not match`, {
+          triggerType: rule.triggerType,
+          condition: rule.triggerCondition,
+          triggerData,
+        });
         return;
       }
 
@@ -85,17 +96,47 @@ export class AutomationEngineService {
 
   /**
    * Check if trigger condition matches the data
+   * Handles both status IDs and status names
    */
-  private matchesTriggerCondition(
+  private async matchesTriggerCondition(
     condition: Record<string, any>,
     data: Record<string, any>
-  ): boolean {
-    // Status changed transition
+  ): Promise<boolean> {
+    // Status changed transition - check both by ID and by name
     if (condition.fromStatus && condition.toStatus) {
-      return (
-        data.previousStatus === condition.fromStatus &&
-        data.currentStatus === condition.toStatus
-      );
+      const previousStatusId = data.previousStatus;
+      const currentStatusId = data.currentStatus;
+      
+      // Get status names to support both ID and name matching
+      let previousStatusName = data.previousStatusName;
+      let currentStatusName = data.currentStatusName;
+      
+      // If names not provided, look them up from IDs
+      if (!previousStatusName && previousStatusId) {
+        const prevStatus = await this.statusRepository.findOne({
+          where: { id: previousStatusId as any }
+        });
+        previousStatusName = prevStatus?.name;
+      }
+      
+      if (!currentStatusName && currentStatusId) {
+        const currStatus = await this.statusRepository.findOne({
+          where: { id: currentStatusId as any }
+        });
+        currentStatusName = currStatus?.name;
+      }
+      
+      const normalize = (value: unknown): string => String(value ?? "").trim().toLowerCase();
+
+      const previousMatched =
+        normalize(previousStatusName) === normalize(condition.fromStatus) ||
+        normalize(previousStatusId) === normalize(condition.fromStatus);
+
+      const currentMatched =
+        normalize(currentStatusName) === normalize(condition.toStatus) ||
+        normalize(currentStatusId) === normalize(condition.toStatus);
+
+      return previousMatched && currentMatched;
     }
 
     // Specific status
@@ -140,18 +181,41 @@ export class AutomationEngineService {
     data: Record<string, any>,
     payload: Record<string, any>
   ): Promise<void> {
-    const { message, recipients } = payload;
-    const { issueId, issueName } = data;
+    const { message, recipients, recipientId } = payload;
+    const { issueId, issueName, issueTitle, projectId } = data;
 
-    if (!recipients || recipients.length === 0) return;
+    const recipientIds = Array.isArray(recipients)
+      ? recipients
+      : recipientId
+        ? [recipientId]
+        : [];
+
+    if (recipientIds.length === 0) {
+      console.warn("⚠️ [AUTOMATION] notify_user skipped - no recipients configured");
+      return;
+    }
 
     try {
-      console.log(`📧 Sending notifications to ${recipients.length} users`);
-      console.log(`   Message: "${message}"`);
-      console.log(`   Issue: ${issueName} (${issueId})`);
+      const issueLabel = issueName || issueTitle || issueId;
+      const content = message || `Automation triggered for issue ${issueLabel}`;
 
-      // In production, integrate with notification service
-      // For now, just log it
+      for (const recipient of recipientIds) {
+        await this.notificationRepository.save({
+          title: `Automation: ${issueLabel}`,
+          message: content,
+          type: NotificationType.ISSUE_UPDATED,
+          priority: NotificationPriority.MEDIUM,
+          recipientId: recipient,
+          metadata: {
+            issueId,
+            projectId,
+            source: "automation",
+          },
+          actionUrl: projectId ? `/projects/${projectId}/board` : undefined,
+        });
+      }
+
+      console.log(`✅ Automation notifications created for ${recipientIds.length} recipients`);
     } catch (error) {
       console.error("❌ Error sending notification:", error);
     }
@@ -165,15 +229,37 @@ export class AutomationEngineService {
     payload: Record<string, any>
   ): Promise<void> {
     const { issueId } = data;
-    const { userId } = payload;
+    let { userId } = payload;
 
     if (!issueId || !userId) return;
 
     try {
+      let targetUserId = userId;
+
+      // Validate provided ID as a real user ID first.
+      const existingUser = await this.userRepository.findOne({ where: { id: targetUserId } });
+
+      // Backward compatibility: some old rules saved project_member.id instead of user.id.
+      if (!existingUser) {
+        const membership = await this.projectMemberRepository.findOne({ where: { id: userId } });
+        if (membership?.userId) {
+          targetUserId = membership.userId;
+          console.warn(
+            `⚠️ [AUTOMATION] assign_user payload used project_member id. Mapped ${userId} -> user ${targetUserId}`
+          );
+        }
+      }
+
+      const verifiedTargetUser = await this.userRepository.findOne({ where: { id: targetUserId } });
+      if (!verifiedTargetUser) {
+        console.error(`❌ [AUTOMATION] assign_user target does not exist in users table: ${userId}`);
+        return;
+      }
+
       await this.issueRepository.update(issueId, {
-        assignee: userId,
+        assignee: targetUserId,
       });
-      console.log(`✅ Auto-assigned issue ${issueId} to user ${userId}`);
+      console.log(`✅ Auto-assigned issue ${issueId} to user ${targetUserId}`);
     } catch (error) {
       console.error("❌ Error auto-assigning issue:", error);
     }

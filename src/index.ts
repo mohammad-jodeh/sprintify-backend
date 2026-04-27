@@ -3,6 +3,7 @@ import { AppDataSource } from "./infrastructure/database/data-source";
 import { ensureDatabaseExists } from "./infrastructure/database/init-db";
 import { registerDependencies } from "./infrastructure/database/container";
 import { fixStatusProjectIdMigration } from "./infrastructure/database/migrations/fix-status-projectid";
+import { logStatusIntegrityReport } from "./infrastructure/database/utils/status-integrity-check";
 import { AppServer } from "./API";
 import dotenv from "dotenv";
 
@@ -97,6 +98,9 @@ if (hasDatabaseUrl) {
     // Then: run data migrations on existing tables
     await fixStatusProjectIdMigration();
     console.log("✅ Migrations completed");
+
+    // Log data integrity warnings so status-link issues are visible early.
+    await logStatusIntegrityReport();
 
     console.log("📡 Starting API server initialization...");
     const API = new AppServer();
