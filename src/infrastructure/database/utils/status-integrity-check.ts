@@ -13,9 +13,14 @@ interface IntegrityProblem {
 
 interface IntegrityReport {
   checkedAt: string;
+  issuesWithoutStatusCount: number;
   issuesWithStatusCount: number;
   statusesCount: number;
-  brokenIssueStatusLinks: number;
+  brokenIssueStatusLinksCount: number;
+  invalidStatusIdFormatCount: number;
+  missingStatusRecordCount: number;
+  statusProjectMismatchCount: number;
+  statusColumnProjectMismatchCount: number;
   sampleProblems: IntegrityProblem[];
 }
 
@@ -25,23 +30,68 @@ export const getStatusIntegrityReport = async (
   const issueRepo = AppDataSource.getRepository(Issue);
   const statusRepo = AppDataSource.getRepository(Status);
 
+  const validStatusIdExpr =
+    "issue.statusId IS NOT NULL AND TRIM(issue.statusId) <> '' AND LOWER(issue.statusId) <> 'null'";
+
+  const invalidStatusIdFormatQuery = issueRepo
+    .createQueryBuilder("issue")
+    .where(validStatusIdExpr)
+    .andWhere(
+      "issue.statusId !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'"
+    );
+
   const baseQuery = issueRepo
     .createQueryBuilder("issue")
-    .leftJoin(Status, "status", "status.id = issue.statusId")
+    .leftJoin(Status, "status", "status.id::text = issue.statusId")
     .leftJoin(BoardColumn, "column", "column.id = status.columnId")
-    .where("issue.statusId IS NOT NULL")
+    .where(validStatusIdExpr)
     .andWhere(
       "status.id IS NULL OR status.projectId <> issue.projectId OR column.id IS NULL OR column.projectId <> issue.projectId"
     );
 
-  const [issuesWithStatusCount, statusesCount, brokenIssueStatusLinks] =
+  const [
+    issuesWithoutStatusCount,
+    issuesWithStatusCount,
+    statusesCount,
+    brokenIssueStatusLinksCount,
+    invalidStatusIdFormatCount,
+    missingStatusRecordCount,
+    statusProjectMismatchCount,
+    statusColumnProjectMismatchCount,
+  ] =
     await Promise.all([
       issueRepo
         .createQueryBuilder("issue")
-        .where("issue.statusId IS NOT NULL")
+        .where("issue.statusId IS NULL OR TRIM(issue.statusId) = '' OR LOWER(issue.statusId) = 'null'")
+        .getCount(),
+      issueRepo
+        .createQueryBuilder("issue")
+        .where(validStatusIdExpr)
         .getCount(),
       statusRepo.count(),
       baseQuery.clone().getCount(),
+      invalidStatusIdFormatQuery.clone().getCount(),
+      issueRepo
+        .createQueryBuilder("issue")
+        .leftJoin(Status, "status", "status.id::text = issue.statusId")
+        .where(validStatusIdExpr)
+        .andWhere("status.id IS NULL")
+        .getCount(),
+      issueRepo
+        .createQueryBuilder("issue")
+        .leftJoin(Status, "status", "status.id::text = issue.statusId")
+        .where(validStatusIdExpr)
+        .andWhere("status.id IS NOT NULL")
+        .andWhere("status.projectId <> issue.projectId")
+        .getCount(),
+      issueRepo
+        .createQueryBuilder("issue")
+        .leftJoin(Status, "status", "status.id::text = issue.statusId")
+        .leftJoin(BoardColumn, "column", "column.id = status.columnId")
+        .where(validStatusIdExpr)
+        .andWhere("status.id IS NOT NULL")
+        .andWhere("(column.id IS NULL OR column.projectId <> issue.projectId)")
+        .getCount(),
     ]);
 
   const sampleRows = await baseQuery
@@ -61,9 +111,14 @@ export const getStatusIntegrityReport = async (
 
   return {
     checkedAt: new Date().toISOString(),
+    issuesWithoutStatusCount,
     issuesWithStatusCount,
     statusesCount,
-    brokenIssueStatusLinks,
+    brokenIssueStatusLinksCount,
+    invalidStatusIdFormatCount,
+    missingStatusRecordCount,
+    statusProjectMismatchCount,
+    statusColumnProjectMismatchCount,
     sampleProblems: sampleRows,
   };
 };
@@ -72,7 +127,10 @@ export const logStatusIntegrityReport = async (): Promise<void> => {
   try {
     const report = await getStatusIntegrityReport();
 
-    if (report.brokenIssueStatusLinks === 0) {
+    if (
+      report.brokenIssueStatusLinksCount === 0 &&
+      report.issuesWithoutStatusCount === 0
+    ) {
       console.log(
         `✅ [STATUS-INTEGRITY] OK | issuesWithStatus=${report.issuesWithStatusCount} statuses=${report.statusesCount}`
       );
@@ -80,7 +138,7 @@ export const logStatusIntegrityReport = async (): Promise<void> => {
     }
 
     console.warn(
-      `⚠️ [STATUS-INTEGRITY] Found ${report.brokenIssueStatusLinks} broken issue-status links | issuesWithStatus=${report.issuesWithStatusCount} statuses=${report.statusesCount}`
+      `⚠️ [STATUS-INTEGRITY] Summary | issuesWithoutStatus=${report.issuesWithoutStatusCount} issuesWithStatus=${report.issuesWithStatusCount} statuses=${report.statusesCount} brokenLinks=${report.brokenIssueStatusLinksCount} invalidStatusIdFormat=${report.invalidStatusIdFormatCount} missingStatusRecord=${report.missingStatusRecordCount} statusProjectMismatch=${report.statusProjectMismatchCount} statusColumnProjectMismatch=${report.statusColumnProjectMismatchCount}`
     );
 
     report.sampleProblems.forEach((item, index) => {

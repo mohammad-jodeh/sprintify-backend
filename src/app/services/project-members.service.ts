@@ -30,10 +30,11 @@ export class ProjectMembersService {
           type: NotificationType.PROJECT_UPDATED,
           priority: NotificationPriority.MEDIUM,
           recipientId: newMembership.userId,
-          senderId: "system", // System notification
+          // senderId is optional; omit it for system-generated notifications.
           metadata: {
             projectId: newMembership.projectId,
             membershipId: membership.id,
+            actorType: "system",
           },
           actionUrl: `/projects/${newMembership.projectId}`,
         });
