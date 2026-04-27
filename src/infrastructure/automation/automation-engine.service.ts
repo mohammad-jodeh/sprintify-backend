@@ -2,6 +2,8 @@ import { AppDataSource } from "../database/data-source";
 import { AutomationRule } from "../../domain/entities";
 import { Issue, ProjectMember, Status, User } from "../../domain/entities";
 import { CacheService } from "../cache/cache.service";
+import { Notification } from "../../domain/entities/notification.entity";
+import { NotificationPriority, NotificationType } from "../../domain/types/enums";
 
 /**
  * Automation Engine Service
@@ -13,6 +15,7 @@ export class AutomationEngineService {
   private statusRepository = AppDataSource.getRepository(Status);
   private userRepository = AppDataSource.getRepository(User);
   private projectMemberRepository = AppDataSource.getRepository(ProjectMember);
+  private notificationRepository = AppDataSource.getRepository(Notification);
   private cache = CacheService.getInstance();
 
   /**
@@ -178,18 +181,41 @@ export class AutomationEngineService {
     data: Record<string, any>,
     payload: Record<string, any>
   ): Promise<void> {
-    const { message, recipients } = payload;
-    const { issueId, issueName } = data;
+    const { message, recipients, recipientId } = payload;
+    const { issueId, issueName, issueTitle, projectId } = data;
 
-    if (!recipients || recipients.length === 0) return;
+    const recipientIds = Array.isArray(recipients)
+      ? recipients
+      : recipientId
+        ? [recipientId]
+        : [];
+
+    if (recipientIds.length === 0) {
+      console.warn("⚠️ [AUTOMATION] notify_user skipped - no recipients configured");
+      return;
+    }
 
     try {
-      console.log(`📧 Sending notifications to ${recipients.length} users`);
-      console.log(`   Message: "${message}"`);
-      console.log(`   Issue: ${issueName} (${issueId})`);
+      const issueLabel = issueName || issueTitle || issueId;
+      const content = message || `Automation triggered for issue ${issueLabel}`;
 
-      // In production, integrate with notification service
-      // For now, just log it
+      for (const recipient of recipientIds) {
+        await this.notificationRepository.save({
+          title: `Automation: ${issueLabel}`,
+          message: content,
+          type: NotificationType.ISSUE_UPDATED,
+          priority: NotificationPriority.MEDIUM,
+          recipientId: recipient,
+          metadata: {
+            issueId,
+            projectId,
+            source: "automation",
+          },
+          actionUrl: projectId ? `/projects/${projectId}/board` : undefined,
+        });
+      }
+
+      console.log(`✅ Automation notifications created for ${recipientIds.length} recipients`);
     } catch (error) {
       console.error("❌ Error sending notification:", error);
     }

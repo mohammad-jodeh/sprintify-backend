@@ -152,6 +152,7 @@ export class IssueService {
     // Store previous values to detect specific changes
     const previousAssignee = existingIssue.assignee;
     const previousStatusId = existingIssue.statusId;
+    const previousPriority = existingIssue.issuePriority;
 
     const updatedIssue = await this.issueRepo.update(issueId, updateIssueDto);
     if (!updatedIssue) {
@@ -255,6 +256,22 @@ export class IssueService {
           console.log(`🤖 [AUTOMATION] Triggered automation rules for assignment on ${updatedIssue.key}`);
         } catch (error) {
           console.error(`❌ [AUTOMATION] Failed to trigger automations for ${updatedIssue.key}:`, error);
+        }
+      }
+
+      // Trigger priority change automations if priority changed
+      if (updateIssueDto.issuePriority && updateIssueDto.issuePriority !== previousPriority) {
+        try {
+          await this.automationEngine.triggerAutomations(projectId, "priority_changed", {
+            issueId: updatedIssue.id,
+            issueKey: updatedIssue.key,
+            issueTitle: updatedIssue.title,
+            priority: updateIssueDto.issuePriority,
+            previousPriority,
+          });
+          console.log(`🤖 [AUTOMATION] Triggered automation rules for priority change on ${updatedIssue.key}`);
+        } catch (error) {
+          console.error(`❌ [AUTOMATION] Failed priority automations for ${updatedIssue.key}:`, error);
         }
       }
     } catch (error) {
