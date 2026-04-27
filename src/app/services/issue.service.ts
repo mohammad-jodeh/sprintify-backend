@@ -73,6 +73,24 @@ export class IssueService {
         assignee: fullIssue.assignee,
       });
       console.log(`🤖 [AUTOMATION] Triggered automation rules for issue creation on ${key}`);
+
+      // Reload issue because automation may have changed assignee/status.
+      const issueAfterAutomation = await this.issueRepo.getById(fullIssue.id);
+      if (issueAfterAutomation) {
+        if (issueAfterAutomation.assignee && issueAfterAutomation.assignee !== fullIssue.assignee) {
+          this.socketService.emitToProject(createIssueDto.projectId, "issue:assigned", {
+            id: issueAfterAutomation.id,
+            key: issueAfterAutomation.key,
+            title: issueAfterAutomation.title,
+            assignee: issueAfterAutomation.assignee,
+            previousAssignee: fullIssue.assignee,
+            assignedBy: "automation",
+          });
+          console.log(`📨 Emitted issue:assigned for issue ${issueAfterAutomation.key} (automation)`);
+        }
+
+        return plainToInstance(IssueFullResponseDto, issueAfterAutomation, { excludeExtraneousValues: true });
+      }
     } catch (error) {
       console.error(`❌ [AUTOMATION] Failed to trigger automations for ${key}:`, error);
     }
@@ -180,6 +198,34 @@ export class IssueService {
             issueTitle: updatedIssue.title,
           });
           console.log(`🤖 [AUTOMATION] Triggered automation rules for status change on ${updatedIssue.key}`);
+
+          // Reload issue because automation may have changed assignee/status again.
+          const issueAfterAutomation = await this.issueRepo.getById(updatedIssue.id);
+          if (issueAfterAutomation) {
+            if (issueAfterAutomation.assignee !== updatedIssue.assignee) {
+              this.socketService.emitToProject(projectId, "issue:assigned", {
+                id: issueAfterAutomation.id,
+                key: issueAfterAutomation.key,
+                title: issueAfterAutomation.title,
+                assignee: issueAfterAutomation.assignee,
+                previousAssignee: updatedIssue.assignee,
+                assignedBy: "automation",
+              });
+              console.log(`📨 Emitted issue:assigned for issue ${issueAfterAutomation.key} (automation)`);
+            }
+
+            if (issueAfterAutomation.statusId !== updatedIssue.statusId) {
+              this.socketService.emitToProject(projectId, "issue:status-changed", {
+                id: issueAfterAutomation.id,
+                key: issueAfterAutomation.key,
+                title: issueAfterAutomation.title,
+                statusId: issueAfterAutomation.statusId,
+                previousStatusId: updatedIssue.statusId,
+                changedBy: "automation",
+              });
+              console.log(`📨 Emitted issue:status-changed for issue ${issueAfterAutomation.key} (automation)`);
+            }
+          }
         } catch (error) {
           console.error(`❌ [AUTOMATION] Failed to trigger automations for ${updatedIssue.key}:`, error);
         }
