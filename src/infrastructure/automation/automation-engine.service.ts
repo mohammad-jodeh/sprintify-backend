@@ -53,7 +53,11 @@ export class AutomationEngineService {
       // Check if trigger condition matches
       const matches = await this.matchesTriggerCondition(rule.triggerCondition, triggerData);
       if (!matches) {
-        console.log(`⏭️ Skipped rule "${rule.name}" - condition did not match`);
+        console.log(`⏭️ Skipped rule "${rule.name}" - condition did not match`, {
+          triggerType: rule.triggerType,
+          condition: rule.triggerCondition,
+          triggerData,
+        });
         return;
       }
 
@@ -117,11 +121,17 @@ export class AutomationEngineService {
         currentStatusName = currStatus?.name;
       }
       
-      // Match by name (condition stores names)
-      return (
-        (previousStatusName === condition.fromStatus || previousStatusId === condition.fromStatus) &&
-        (currentStatusName === condition.toStatus || currentStatusId === condition.toStatus)
-      );
+      const normalize = (value: unknown): string => String(value ?? "").trim().toLowerCase();
+
+      const previousMatched =
+        normalize(previousStatusName) === normalize(condition.fromStatus) ||
+        normalize(previousStatusId) === normalize(condition.fromStatus);
+
+      const currentMatched =
+        normalize(currentStatusName) === normalize(condition.toStatus) ||
+        normalize(currentStatusId) === normalize(condition.toStatus);
+
+      return previousMatched && currentMatched;
     }
 
     // Specific status
