@@ -1,6 +1,6 @@
 import { AppDataSource } from "../database/data-source";
 import { AutomationRule } from "../../domain/entities";
-import { Issue, Status } from "../../domain/entities";
+import { Issue, ProjectMember, Status, User } from "../../domain/entities";
 import { CacheService } from "../cache/cache.service";
 
 /**
@@ -11,6 +11,8 @@ export class AutomationEngineService {
   private ruleRepository = AppDataSource.getRepository(AutomationRule);
   private issueRepository = AppDataSource.getRepository(Issue);
   private statusRepository = AppDataSource.getRepository(Status);
+  private userRepository = AppDataSource.getRepository(User);
+  private projectMemberRepository = AppDataSource.getRepository(ProjectMember);
   private cache = CacheService.getInstance();
 
   /**
@@ -201,15 +203,37 @@ export class AutomationEngineService {
     payload: Record<string, any>
   ): Promise<void> {
     const { issueId } = data;
-    const { userId } = payload;
+    let { userId } = payload;
 
     if (!issueId || !userId) return;
 
     try {
+      let targetUserId = userId;
+
+      // Validate provided ID as a real user ID first.
+      const existingUser = await this.userRepository.findOne({ where: { id: targetUserId } });
+
+      // Backward compatibility: some old rules saved project_member.id instead of user.id.
+      if (!existingUser) {
+        const membership = await this.projectMemberRepository.findOne({ where: { id: userId } });
+        if (membership?.userId) {
+          targetUserId = membership.userId;
+          console.warn(
+            `⚠️ [AUTOMATION] assign_user payload used project_member id. Mapped ${userId} -> user ${targetUserId}`
+          );
+        }
+      }
+
+      const verifiedTargetUser = await this.userRepository.findOne({ where: { id: targetUserId } });
+      if (!verifiedTargetUser) {
+        console.error(`❌ [AUTOMATION] assign_user target does not exist in users table: ${userId}`);
+        return;
+      }
+
       await this.issueRepository.update(issueId, {
-        assignee: userId,
+        assignee: targetUserId,
       });
-      console.log(`✅ Auto-assigned issue ${issueId} to user ${userId}`);
+      console.log(`✅ Auto-assigned issue ${issueId} to user ${targetUserId}`);
     } catch (error) {
       console.error("❌ Error auto-assigning issue:", error);
     }
