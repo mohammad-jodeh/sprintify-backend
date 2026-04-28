@@ -11,14 +11,13 @@ export class UserRoutes extends BaseRoute {
   protected initRoutes(): void {
     const controller = container.resolve(UserController);
 
-    // Middleware to prevent user enumeration - only allow searching own profile
+    // Middleware to prevent user enumeration - allow email search but restrict ID search to own profile
     const restrictUserSearch = (req: Request, res: Response, next: NextFunction) => {
       const searchId = req.query.id as string;
-      const searchEmail = req.query.email as string;
       const userId = req.user?.id;
 
-      // Only allow searching own user ID
-      if ((searchId && searchId !== userId) || searchEmail) {
+      // Only allow searching own user ID, but allow searching by email
+      if (searchId && searchId !== userId) {
         return res.status(403).json({
           success: false,
           message: "You can only view your own user information",
