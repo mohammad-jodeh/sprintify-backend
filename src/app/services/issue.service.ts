@@ -9,7 +9,7 @@ import {
 import { IIssueRepo } from "../../domain/IRepos/IIssueRepo";
 import { IUserRepo } from "../../domain/IRepos/IUserRepo";
 import { Issue } from "../../domain/entities";
-import { ServerError, NotFoundException } from "../exceptions"; 
+import { ServerError, NotFoundException, ForbiddenException } from "../exceptions"; 
 import { FindIssueQueryOptions } from "../../domain/option/issueQueryOptions"; 
 import { NotificationService } from "./notification.service";
 import { NotificationType, NotificationPriority } from "../../domain/types/enums";
@@ -141,6 +141,19 @@ export class IssueService {
     if (!existingIssue) {
       throw new NotFoundException("Issue not found");
     }
+
+    // ===== PERMISSION CHECK: Issue Movement Authorization =====
+    // Users can only move issues that are:
+    // 1. Assigned to them, OR
+    // 2. Unassigned
+    if (updateIssueDto.statusId && updateIssueDto.statusId !== existingIssue.statusId) {
+      if (existingIssue.assignee && existingIssue.assignee !== userId) {
+        throw new ForbiddenException(
+          "You can only move issues assigned to you or unassigned issues"
+        );
+      }
+    }
+    // ===== END PERMISSION CHECK =====
 
     // Store previous values to detect specific changes
     const previousAssignee = existingIssue.assignee;
