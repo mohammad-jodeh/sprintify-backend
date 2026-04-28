@@ -53,6 +53,7 @@
     "dotenv": "^16.5.0",
     "express": "^5.1.0",
     "express-rate-limit": "^7.1.5",
+    "helmet": "^7.2.0",
     "jsonwebtoken": "^9.0.2",
     "pg": "^8.14.1",
     "postmark": "^4.0.5",
@@ -62,6 +63,7 @@
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1",
     "tsyringe": "^4.10.0",
-    "typeorm": "^0.3.22"
+    "typeorm": "^0.3.22",
+    "xss": "^1.0.15"
   }
 }

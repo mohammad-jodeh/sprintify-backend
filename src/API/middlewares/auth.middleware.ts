@@ -37,7 +37,7 @@ export const authenticate = (
   try {
     const jwtSecret = process.env.JWT_SECRET;
     if (!jwtSecret) {
-      console.error("🔴 CRITICAL: JWT_SECRET environment variable not set");
+      console.error("🔴 CRITICAL: Required environment variable not set");
       res.status(500).json({ message: "Server configuration error", success: false });
       return;
     }

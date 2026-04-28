@@ -121,7 +121,7 @@ export class SocketService {
 
       const jwtSecret = process.env.JWT_SECRET;
       if (!jwtSecret) {
-        console.error("🔌 Authentication failed: JWT_SECRET not configured");
+        console.error("🔌 Authentication failed: Required environment variable not configured");
         return next(new Error("Server configuration error"));
       }
 
