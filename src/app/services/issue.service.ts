@@ -9,7 +9,7 @@ import {
 import { IIssueRepo } from "../../domain/IRepos/IIssueRepo";
 import { IUserRepo } from "../../domain/IRepos/IUserRepo";
 import { Issue } from "../../domain/entities";
-import { ServerError, NotFoundException } from "../exceptions"; 
+import { ServerError, NotFoundException, ForbiddenException } from "../exceptions"; 
 import { FindIssueQueryOptions } from "../../domain/option/issueQueryOptions"; 
 import { NotificationService } from "./notification.service";
 import { NotificationType, NotificationPriority } from "../../domain/types/enums";
@@ -46,14 +46,7 @@ export class IssueService {
     try {
       const issueResponse = plainToInstance(IssueFullResponseDto, fullIssue, { excludeExtraneousValues: true });
       this.socketService.emitToProject(createIssueDto.projectId, "issue:created", {
-        id: fullIssue.id,
-        key: fullIssue.key,
-        title: fullIssue.title,
-        description: fullIssue.description,
-        projectId: fullIssue.projectId,
-        sprintId: fullIssue.sprintId,
-        statusId: fullIssue.statusId,
-        assignee: fullIssue.assignee,
+        issue: issueResponse,
         createdBy: userId,
       });
       console.log(`📨 Emitted issue:created for issue ${key} to project ${createIssueDto.projectId}`);
@@ -149,6 +142,19 @@ export class IssueService {
       throw new NotFoundException("Issue not found");
     }
 
+    // ===== PERMISSION CHECK: Issue Movement Authorization =====
+    // Users can only move issues that are:
+    // 1. Assigned to them, OR
+    // 2. Unassigned
+    if (updateIssueDto.statusId && updateIssueDto.statusId !== existingIssue.statusId) {
+      if (existingIssue.assignee && existingIssue.assignee !== userId) {
+        throw new ForbiddenException(
+          "You can only move issues assigned to you or unassigned issues"
+        );
+      }
+    }
+    // ===== END PERMISSION CHECK =====
+
     // Store previous values to detect specific changes
     const previousAssignee = existingIssue.assignee;
     const previousStatusId = existingIssue.statusId;
@@ -159,20 +165,16 @@ export class IssueService {
       throw new ServerError("Failed to update issue"); 
     }
 
+    // Reload the issue to get full details for socket events
+    const fullUpdatedIssue = await this.issueRepo.getById(issueId);
+    
     // ===== EMIT REAL-TIME SOCKET EVENTS =====
     try {
       const projectId = updatedIssue.projectId;
       
-      // Emit general update event
+      // Emit general update event with full issue object
       this.socketService.emitToProject(projectId, "issue:updated", {
-        id: updatedIssue.id,
-        key: updatedIssue.key,
-        title: updatedIssue.title,
-        description: updatedIssue.description,
-        projectId: updatedIssue.projectId,
-        sprintId: updatedIssue.sprintId,
-        statusId: updatedIssue.statusId,
-        assignee: updatedIssue.assignee,
+        issue: plainToInstance(IssueFullResponseDto, fullUpdatedIssue, { excludeExtraneousValues: true }),
         updatedBy: userId,
       });
       console.log(`📨 Emitted issue:updated for issue ${updatedIssue.key}`);
@@ -180,10 +182,7 @@ export class IssueService {
       // Emit status change event if status changed
       if (updateIssueDto.statusId && updateIssueDto.statusId !== previousStatusId) {
         this.socketService.emitToProject(projectId, "issue:status-changed", {
-          id: updatedIssue.id,
-          key: updatedIssue.key,
-          title: updatedIssue.title,
-          statusId: updatedIssue.statusId,
+          issue: plainToInstance(IssueFullResponseDto, fullUpdatedIssue, { excludeExtraneousValues: true }),
           previousStatusId: previousStatusId,
           changedBy: userId,
         });
@@ -235,10 +234,7 @@ export class IssueService {
       // Emit assignment change event if assignee changed
       if (updateIssueDto.assignee && updateIssueDto.assignee !== previousAssignee) {
         this.socketService.emitToProject(projectId, "issue:assigned", {
-          id: updatedIssue.id,
-          key: updatedIssue.key,
-          title: updatedIssue.title,
-          assignee: updatedIssue.assignee,
+          issue: plainToInstance(IssueFullResponseDto, fullUpdatedIssue, { excludeExtraneousValues: true }),
           previousAssignee: previousAssignee,
           assignedBy: userId,
         });
@@ -319,7 +315,7 @@ export class IssueService {
     // ===== EMIT REAL-TIME SOCKET EVENT =====
     try {
       this.socketService.emitToProject(issue.projectId, "issue:deleted", {
-        id: issueId,
+        issueId: issueId,
         key: issue.key,
         title: issue.title,
         projectId: issue.projectId,

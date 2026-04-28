@@ -5,11 +5,22 @@ import { UserController } from "../controllers/user.controller";
 import { authenticate } from "../middlewares/auth.middleware";
 import { restrictTokens } from "../middlewares/tokenTypes.middleware";
 import { Token } from "../enums/token";
+import rateLimit from "express-rate-limit";
 
 export class UserRoutes extends BaseRoute {
   public path = "/user";
   protected initRoutes(): void {
     const controller = container.resolve(UserController);
+
+    // Rate limiting for auth endpoints (prevent brute force)
+    const authLimiter = rateLimit({
+      windowMs: 15 * 60 * 1000, // 15 minutes
+      max: 5, // limit each IP to 5 requests per windowMs
+      message: "Too many login/register attempts, please try again later",
+      standardHeaders: true,
+      legacyHeaders: false,
+      skip: () => process.env.NODE_ENV === "development",
+    });
 
     // Middleware to prevent user enumeration - allow email search but restrict ID search to own profile
     const restrictUserSearch = (req: Request, res: Response, next: NextFunction) => {
@@ -27,8 +38,8 @@ export class UserRoutes extends BaseRoute {
       next();
     };
 
-    this.router.post("/register", controller.register.bind(controller));
-    this.router.post("/login", controller.login.bind(controller));
+    this.router.post("/register", authLimiter, controller.register.bind(controller));
+    this.router.post("/login", authLimiter, controller.login.bind(controller));
     this.router.post(
       "/verify-email",
       authenticate,
@@ -37,6 +48,7 @@ export class UserRoutes extends BaseRoute {
     );
     this.router.post(
       "/forget-password",
+      authLimiter,
       controller.forgetPassword.bind(controller),
     );
     this.router.post(

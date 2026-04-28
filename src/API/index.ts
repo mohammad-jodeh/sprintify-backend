@@ -6,12 +6,14 @@ import { glob } from "glob";
 import path from "path";
 import swaggerUi from "swagger-ui-express";
 import errorMiddleware from "./middlewares/error.middleware";
+import { sanitizeInput } from "./middlewares/sanitize.middleware";
 import { createServer, Server as HttpServer } from "http";
 import { container } from "tsyringe";
 import { SocketService } from "../infrastructure/socket/socket.service";
 import cors from "cors";
 import rateLimit from "express-rate-limit";
 import compression from "compression";
+import helmet from "helmet";
 
 
 export class AppServer {
@@ -41,17 +43,10 @@ export class AppServer {
     this.app.use(express.json({ limit: "10mb" }));
     this.app.use(express.urlencoded({ limit: "10mb", extended: true }));
 
-    // Security Headers - Enhanced
-    this.app.use((req, res, next) => {
-      res.setHeader("X-Content-Type-Options", "nosniff");
-      res.setHeader("X-Frame-Options", "DENY");
-      res.setHeader("X-XSS-Protection", "1; mode=block");
-      res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
-      res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload");
-      res.setHeader("Content-Security-Policy", "default-src 'self'");
-      next();
-    });
+    // Input Sanitization - Prevent XSS attacks
+    this.app.use(sanitizeInput);
 
+    // ===== CORS CONFIGURATION (MUST BE BEFORE HELMET) =====
     // CORS Configuration - Allow production & all Vercel deployments
     const allowedOrigins = [
       "https://sprintify-frontend-blue.vercel.app", // Production frontend
@@ -94,6 +89,23 @@ export class AppServer {
 
     // Apply CORS middleware (this handles preflight OPTIONS automatically)
     this.app.use(cors(corsOptions));
+
+    // Security Headers - Helmet provides comprehensive protection
+    this.app.use(helmet({
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'self'"],
+          scriptSrc: ["'self'"],
+          styleSrc: ["'self'", "'unsafe-inline'"],
+          imgSrc: ["'self'", "data:", "https:"],
+        },
+      },
+      hsts: {
+        maxAge: 31536000,
+        includeSubDomains: true,
+        preload: true,
+      },
+    }));
 
     // Compression Middleware - Reduce response size by 70-80%
     this.app.use(compression({
