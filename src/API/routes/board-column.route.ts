@@ -28,14 +28,14 @@ export class BoardColumnRoutes extends BaseRoute {
     this.router.patch(
       "/",
       restrictTokens(Token.ACCESS),
-      restrictTo(ProjectPermission.MODERATOR),
+      restrictTo(ProjectPermission.MEMBER),
       controller.update.bind(controller)
     );
 
     this.router.patch(
       "/bulk/reorder",
       restrictTokens(Token.ACCESS),
-      restrictTo(ProjectPermission.MODERATOR),
+      restrictTo(ProjectPermission.MEMBER),
       controller.updateBulk.bind(controller)
     );
 

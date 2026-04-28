@@ -119,17 +119,43 @@ export class AppServer {
       }
     }));
 
-    // Rate Limiting - Global
+    // Rate Limiting - Global with proper proxy awareness
+    // Use X-Forwarded-For header to get real client IP (Railway sets this)
+    const getClientIp = (req: any): string => {
+      // Check X-Forwarded-For first (set by Railway/proxies)
+      const xForwardedFor = req.headers['x-forwarded-for'];
+      if (xForwardedFor) {
+        return (typeof xForwardedFor === 'string' 
+          ? xForwardedFor 
+          : xForwardedFor[0]
+        ).split(',')[0].trim();
+      }
+      // Fallback to direct connection
+      return req.ip || req.connection.remoteAddress || '0.0.0.0';
+    };
+
     const generalLimiter = rateLimit({
       windowMs: 15 * 60 * 1000, // 15 minutes
-      max: 200, // limit each IP to 200 requests per windowMs
-      message: "Too many requests from this IP, please try again later",
+      max: 1000, // Increased from 200 to 1000 (~1.1 req/sec) - reasonable for modern SPAs
+      message: "Too many requests, please try again later",
       standardHeaders: true,
       legacyHeaders: false,
       skip: (req: any) => process.env.NODE_ENV === "development",
+      keyGenerator: (req: any) => {
+        // Use real client IP for rate limiting
+        return getClientIp(req);
+      },
+      handler: (req: any, res: any) => {
+        console.warn(`⚠️  Rate limit exceeded for IP: ${getClientIp(req)}`);
+        res.status(429).json({
+          error: "Too many requests",
+          message: "Rate limit exceeded. Please try again later.",
+          retryAfter: req.rateLimit?.resetTime ? Math.ceil((req.rateLimit.resetTime - Date.now()) / 1000) : 60
+        });
+      }
     });
 
-    // Apply rate limiting globally (simpler and more reliable)
+    // Apply rate limiting globally
     this.app.use(generalLimiter);
   }
 
