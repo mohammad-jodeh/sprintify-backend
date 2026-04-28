@@ -20,14 +20,26 @@ export const sanitizeInput = (
     req.body = sanitizeObject(req.body);
   }
 
-  // Sanitize query parameters
+  // Sanitize query parameters (in-place, don't reassign)
   if (req.query && typeof req.query === "object") {
-    req.query = sanitizeObject(req.query);
+    for (const key in req.query) {
+      if (typeof req.query[key] === "string") {
+        req.query[key] = xss(req.query[key] as string, {
+          whiteList: {}, // No HTML tags allowed
+        });
+      }
+    }
   }
 
-  // Sanitize URL parameters
+  // Sanitize URL parameters (in-place, don't reassign)
   if (req.params && typeof req.params === "object") {
-    req.params = sanitizeObject(req.params);
+    for (const key in req.params) {
+      if (typeof req.params[key] === "string") {
+        req.params[key] = xss(req.params[key], {
+          whiteList: {}, // No HTML tags allowed
+        });
+      }
+    }
   }
 
   next();
