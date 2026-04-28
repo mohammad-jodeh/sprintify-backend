@@ -107,49 +107,6 @@ export class AppServer {
       },
     }));
 
-    // CORS Configuration - Allow production & all Vercel deployments
-    const allowedOrigins = [
-      "https://sprintify-frontend-blue.vercel.app", // Production frontend
-      process.env.FRONTEND_URL,                      // Railway/custom domain
-      "http://localhost:5173",                       // Local development
-      "http://localhost:3000",                       // Alternative local port
-      "http://127.0.0.1:5173",                       // Local IP
-      "http://127.0.0.1:3000",                       // Local IP alt
-    ].filter(Boolean); // Remove undefined values
-
-    const corsOptions = {
-      origin: function (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) {
-        // Allow requests with no origin (like mobile apps or curl requests)
-        if (!origin) {
-          callback(null, true);
-          return;
-        }
-
-        // Allow specific whitelisted origins
-        if (allowedOrigins.includes(origin)) {
-          callback(null, true);
-          return;
-        }
-
-        // Allow all *.vercel.app domains (production and preview deployments)
-        if (origin.endsWith('.vercel.app')) {
-          callback(null, true);
-          return;
-        }
-
-        // Reject all other origins
-        callback(new Error("CORS not allowed for this origin: " + origin));
-      },
-      methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE", "OPTIONS"],
-      allowedHeaders: ["Content-Type", "Authorization"],
-      credentials: true,  // Enable credentials (cookies, auth headers)
-      optionsSuccessStatus: 200,
-      preflightContinue: false,
-    };
-
-    // Apply CORS middleware (this handles preflight OPTIONS automatically)
-    this.app.use(cors(corsOptions));
-
     // Compression Middleware - Reduce response size by 70-80%
     this.app.use(compression({
       level: 6, // Balance between speed and compression
