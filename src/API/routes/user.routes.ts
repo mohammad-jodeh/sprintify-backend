@@ -17,7 +17,8 @@ export class UserRoutes extends BaseRoute {
       const userId = req.user?.id;
 
       // Only allow searching own user ID, but allow searching by email
-      if (searchId && searchId !== userId) {
+      // Ignore if searchId is "null" or empty
+      if (searchId && searchId !== "null" && searchId !== userId) {
         return res.status(403).json({
           success: false,
           message: "You can only view your own user information",
